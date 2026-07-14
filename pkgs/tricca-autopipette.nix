@@ -29,6 +29,12 @@ python3Packages.buildPythonPackage {
 
   inherit src;
 
+  # pyproject declares the PyPI name "opencv-python"; nixpkgs provides the
+  # same cv2 module via opencv4 (in dependencies below), which doesn't
+  # register that dist name — strip it from wheel metadata so the
+  # runtime-deps check passes.
+  pythonRemoveDeps = [ "opencv-python" ];
+
   build-system = with python3Packages; [ setuptools ]; # pyproject: setuptools>=80
 
   dependencies = with python3Packages; [
