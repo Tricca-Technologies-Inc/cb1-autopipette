@@ -6,9 +6,16 @@
 #     lives on the `gui` branch, top-level (not src/), so it is excluded from
 #     the wheel. Merge it under src/autopipette_kiosk first — see README.
 #
-# Build on a desktop, never the CB1:
+# The CB1 builds this package itself during `switch` — it's pure Python and
+# takes seconds. Avoid building anything HEAVY on the CB1 (1 GB RAM): if a
+# nixpkgs bump ever cache-misses a big dependency (e.g. opencv), build on a
+# desktop and push instead:
 #   nix build .#tricca-autopipette --system aarch64-linux
+#     (x86_64 desktop: needs qemu binfmt + extra-platforms, or a remote
+#      aarch64 builder; see nixos.wiki "cross compiling")
 #   nix copy --to ssh://cb1 ./result
+#     (your ssh user must be a trusted-user on the CB1's nix.conf, and both
+#      machines must share the same committed flake.lock)
 
 { lib
 , python3Packages
@@ -20,14 +27,7 @@ python3Packages.buildPythonPackage {
   version = "0.1.0";
   pyproject = true;
 
-  src = fetchFromGitHub {
-    owner = "Tricca-Technologies-Inc";
-    repo = "Tricca_AutoPipette";
-    # main as of 2026-07-13. NOTE: kiosk app not yet on main — see README.
-    rev = "8b2cbbbc822d2650483046ac20c9c4f802396b0b";
-    # First build fails printing the real hash — paste it here:
-    hash = lib.fakeHash;
-  };
+  inherit src;
 
   build-system = with python3Packages; [ setuptools ]; # pyproject: setuptools>=80
 
@@ -39,14 +39,9 @@ python3Packages.buildPythonPackage {
     requests
     websockets
     numpy
-    # Required by the kiosk app but MISSING from pyproject [project.dependencies]:
     fastapi
-    # uvicorn comes from triccaEnv in flake.nix (it's the server, not a lib dep,
-    # though adding it to pyproject too is harmless and keeps venv dev workflows working)
+    uvicorn
   ];
-
-  # requires-python = ">=3.12" — nixpkgs python3 is currently fine; pin
-  # python312 explicitly in flake.nix if nixpkgs default ever drifts below.
 
   doCheck = false; # hardware-in-the-loop; tests need Moonraker mocked
 
