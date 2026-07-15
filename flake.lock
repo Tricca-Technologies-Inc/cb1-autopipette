@@ -105,9 +105,26 @@
         "type": "github"
       }
     },
+    "printer-cfgs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784143428,
+        "narHash": "sha256-WYo0OYOVxHNKPVqi0rmcCIMQXYEOx/Cxcpm87KYGhcE=",
+        "owner": "Tricca-Technologies-Inc",
+        "repo": "Tricca_Autopipette_Configs",
+        "rev": "4486262275f2ebbed512ab8b7fde670ea4a1a1c0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Tricca-Technologies-Inc",
+        "repo": "Tricca_Autopipette_Configs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
+        "printer-cfgs": "printer-cfgs",
         "system-manager": "system-manager",
         "tricca-src": "tricca-src"
       }
