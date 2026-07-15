@@ -16,7 +16,10 @@ let
   user = "pipette";
   url = "http://127.0.0.1:8000"; # keep in sync with modules/autopipette.nix
 
-  xinitrc = pkgs.writeText "kiosk-xinitrc" ''
+  # writeScript, NOT writeText: xinit execs this file as the X client, so it
+  # must be executable. writeText (mode 444) makes X start and immediately
+  # tear down with no client — a silent ~1s restart loop.
+  xinitrc = pkgs.writeScript "kiosk-xinitrc" ''
     #!/bin/sh
     xset s off
     xset -dpms
@@ -66,6 +69,11 @@ in
         PAMName = "login";
         TTYPath = "/dev/tty1";
         StandardInput = "tty";
+        # X needs the tty on stdin, but stdout/stderr go to the journal —
+        # otherwise chromium/xinit errors only flash by on tty1 and
+        # journalctl -u kiosk shows nothing useful.
+        StandardOutput = "journal";
+        StandardError = "journal";
         UtmpIdentifier = "tty1";
         ExecStartPre = "${kioskPre}";
         PermissionsStartOnly = true; # preStart as root (sysfs write); X as ${user}
