@@ -54,7 +54,10 @@ in
   config = {
     systemd.services.kiosk = {
       description = "Chromium kiosk for AutoPipette UI";
-      wantedBy = [ "graphical.target" ];
+      # multi-user.target, NOT graphical.target: the minimal Armbian image's
+      # default target is multi-user, so a graphical.target hook never fires
+      # and the kiosk sits "inactive (dead)" forever.
+      wantedBy = [ "multi-user.target" ];
       after = [ "autopipette.service" "systemd-user-sessions.service" ];
       wants = [ "autopipette.service" ];
       conflicts = [ "getty@tty1.service" ];

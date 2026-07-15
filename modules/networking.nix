@@ -36,6 +36,11 @@
       "netplan/armbian.yaml" = {
         # netplan complains if config is world-readable
         mode = "0600";
+        # Take ownership even if a stock/regenerated armbian.yaml is present
+        # (backed up to armbian.yaml.system-manager-backup automatically) —
+        # otherwise system-manager skips the file with a WARN and the wifi
+        # fix silently doesn't apply.
+        replaceExisting = true;
         text = ''
           network:
             version: 2

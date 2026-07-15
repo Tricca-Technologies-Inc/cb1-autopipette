@@ -12,9 +12,14 @@
       url = "github:Tricca-Technologies-Inc/Tricca_AutoPipette";
       flake = false;
     };
+    # Klipper config set (printer.cfg + includes), pinned like everything else
+    printer-cfgs = {
+      url = "github:Tricca-Technologies-Inc/Tricca_Autopipette_Configs";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, system-manager, tricca-src, ... }:
+  outputs = { self, nixpkgs, system-manager, tricca-src, printer-cfgs, ... }:
     let
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -25,6 +30,14 @@
         tricca-autopipette
         ps.uvicorn
       ]);
+      # Host MCU: klipper.elf built for the "Linux process" target, running on
+      # the CB1 itself (printer.cfg: [mcu CB1] serial=/tmp/klipper_host_mcu).
+      # Built from the SAME pinned klipper source as klippy, so host-MCU and
+      # klippy protocol versions can never mismatch.
+      klipperHostMcu = pkgs.klipper-firmware.override {
+        mcu = "host";
+        firmwareConfig = ./config/klipper-host-mcu.config;
+      };
     in
     {
       # Applied with:  sudo -i nix run 'github:numtide/system-manager' -- switch --flake /opt/cb1-autopipette
@@ -36,7 +49,7 @@
           ./modules/autopipette.nix
           ./modules/kiosk.nix
         ];
-        extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src; };
+        extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu; };
       };
 
       packages.${system} = {

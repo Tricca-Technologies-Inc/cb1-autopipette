@@ -7,17 +7,16 @@
 # intentional; updates flow through the flake.
 #
 # Layout (FHS-ish, since this is Armbian not NixOS):
-#   /var/lib/klipper/printer.cfg    — writable (SAVE_CONFIG rewrites it),
-#                                     seeded from config/printer.cfg on first boot
+#   /var/lib/moonraker/config/printer.cfg — writable (SAVE_CONFIG, Mainsail editor),
+#                                     seeded from the pinned configs repo on first boot
 #   /var/lib/moonraker/             — moonraker data dir
 #   /etc/klipper/moonraker.conf     — nix-managed, read-only
 #   Mainsail static files           — served by nixpkgs nginx on :80
 
-{ pkgs, ... }:
+{ pkgs, printer-cfgs, klipperHostMcu, ... }:
 let
   user = "pipette"; # created in bootstrap.sh; member of dialout for /dev/serial
 
-  seededPrinterCfg = ../config/printer.cfg;
 
   nginxConf = pkgs.writeText "mainsail-nginx.conf" ''
     daemon off;
@@ -63,17 +62,42 @@ in
     environment.etc."klipper/moonraker.conf".source = ../config/moonraker.conf;
 
     systemd.services = {
+      # Klipper host MCU: a second klipper process on the CB1 itself, exposing
+      # the board's own GPIO at /tmp/klipper_host_mcu (printer.cfg: [mcu CB1]).
+      # Runs as root: -r requests realtime scheduling, and GPIO access needs
+      # it anyway. If it crash-loops on this kernel, drop the -r flag first.
+      klipper-mcu = {
+        description = "Klipper host MCU (Linux process)";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          ExecStart = "${klipperHostMcu}/klipper.elf -r";
+          Restart = "always";
+          RestartSec = 5;
+        };
+      };
+
       klipper = {
         description = "Klipper 3D printer firmware host";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network.target" ];
+        after = [ "network.target" "klipper-mcu.service" ];
+        wants = [ "klipper-mcu.service" ];
         preStart = ''
-          mkdir -p /var/lib/klipper /run/klipper
-          # Seed printer.cfg once; never overwrite — SAVE_CONFIG owns it after that
-          if [ ! -f /var/lib/klipper/printer.cfg ]; then
-            install -m 0644 -o ${user} ${seededPrinterCfg} /var/lib/klipper/printer.cfg
+          # printer.cfg lives in MOONRAKER's config dir — Mainsail's config
+          # editor only sees files under moonraker's data path, and the whole
+          # edit->save->restart loop in the web UI depends on that.
+          mkdir -p /var/lib/moonraker/config /run/klipper
+          # Seed the config set once from the pinned configs repo; never
+          # overwrite — SAVE_CONFIG and Mainsail edits own these afterward.
+          # Re-seed a machine: delete printer.cfg here and restart klipper.
+          # NOTE: the repo's moonraker.conf is deliberately NOT copied — it
+          # describes the legacy KIAUH layout; /etc/klipper/moonraker.conf
+          # (nix-managed) is authoritative here.
+          if [ ! -f /var/lib/moonraker/config/printer.cfg ]; then
+            for f in ${printer-cfgs}/*.cfg; do
+              install -m 0644 -o ${user} "$f" /var/lib/moonraker/config/
+            done
           fi
-          chown -R ${user} /var/lib/klipper /run/klipper
+          chown -R ${user} /var/lib/moonraker /run/klipper
         '';
         serviceConfig = {
           User = user;
@@ -82,7 +106,7 @@ in
             ${pkgs.klipper}/bin/klippy \
               --input-tty=/run/klipper/tty \
               --api-server=/run/klipper/api \
-              /var/lib/klipper/printer.cfg
+              /var/lib/moonraker/config/printer.cfg
           '';
           Restart = "always";
           RestartSec = 5;
@@ -96,6 +120,10 @@ in
         wantedBy = [ "multi-user.target" ];
         after = [ "klipper.service" "network.target" ];
         wants = [ "klipper.service" ];
+        # Moonraker's machine component shells out to `ip` for network info;
+        # without this the journal fills with ShellCommandError tracebacks
+        # from _parse_network_interfaces (non-fatal but noisy).
+        path = [ pkgs.iproute2 ];
         preStart = ''
           mkdir -p /var/lib/moonraker
           chown -R ${user} /var/lib/moonraker

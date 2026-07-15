@@ -34,7 +34,8 @@ modules/klipper.nix          klipper, moonraker, mainsail(nginx) services
 modules/autopipette.nix      FastAPI backend service (:8000)
 modules/kiosk.nix            chromium kiosk on tty1, waits for backend
 pkgs/tricca-autopipette.nix  python package (scaffold — see TODOs)
-config/printer.cfg           seed config, copied once (SAVE_CONFIG owns it after)
+config/klipper-host-mcu.config  Kconfig for the on-board host MCU build
+(printer.cfg & includes seed from the pinned Tricca_Autopipette_Configs input)
 config/moonraker.conf        nix-managed, read-only
 ```
 
@@ -46,8 +47,8 @@ config/moonraker.conf        nix-managed, read-only
 4. Connect wifi (once; credentials never enter the repo):
    `sudo nmcli device wifi connect "SSID" password "PASS" ifname wlan0`
 5. Flash Klipper firmware to the Manta M8P (unchanged from stock Klipper
-   docs — MCU flashing is outside Nix's scope), set the serial ID in
-   `config/printer.cfg`.
+   docs — MCU flashing is outside Nix's scope), set the serial ID via
+   Mainsail's config editor (or in the Tricca_Autopipette_Configs repo).
 6. Reboot. Boot chain: Plymouth splash → klipper → moonraker → autopipette →
    kiosk polls :8000 → splash quits → Chromium fullscreen.
 
@@ -77,7 +78,7 @@ Moonraker's `update_manager` is intentionally absent — updates flow through
 - Verify nixpkgs binary names once (`nix build nixpkgs#klipper && ls result/bin`);
   service `ExecStart`s assume `klippy` and `moonraker`.
 - `printer.cfg` is seeded once and then mutable (SAVE_CONFIG). Machines
-  diverge there by design; re-seed by deleting `/var/lib/klipper/printer.cfg`.
+  diverge there by design; re-seed by deleting `/var/lib/moonraker/config/printer.cfg`.
 - Wifi driver name in the udev rule is `rtl8189fs` — letter "l", not digit
   "1". New board revisions: confirm with
   `udevadm info -q property /sys/class/net/wlan0 | grep ID_NET_DRIVER`.
