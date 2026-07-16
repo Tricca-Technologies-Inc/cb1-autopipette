@@ -70,9 +70,13 @@ else
     install -m 0644 "$LOGO" /usr/share/plymouth/themes/armbian/bgrt-fallback.png
   fi
   apt-mark hold armbian-plymouth-theme
-  grep -q '^extraargs=' /boot/armbianEnv.txt \
-    && sed -i 's/^extraargs=/extraargs=splash quiet plymouth.ignore-serial-consoles /' /boot/armbianEnv.txt \
-    || echo 'extraargs=splash quiet plymouth.ignore-serial-consoles' >> /boot/armbianEnv.txt
+  # bootlogo=true is the Armbian-native switch: boot.cmd then emits
+  # "splash plymouth.ignore-serial-consoles" on the kernel cmdline.
+  # (bootlogo=false yields "splash=verbose" and plymouth never starts —
+  # do NOT hand-manage these tokens via extraargs.)
+  grep -q '^bootlogo=' /boot/armbianEnv.txt \
+    && sed -i 's/^bootlogo=.*/bootlogo=true/' /boot/armbianEnv.txt \
+    || echo 'bootlogo=true' >> /boot/armbianEnv.txt
   update-initramfs -u
 fi
 
