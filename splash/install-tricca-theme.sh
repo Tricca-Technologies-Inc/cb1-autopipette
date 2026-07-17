@@ -12,6 +12,9 @@ set -euo pipefail
 
 LOGO_V=".42"      # WatermarkVerticalAlignment: logo center, fraction of screen height
 THROB_V=".68"     # VerticalAlignment: throbber center — below the logo
+LOGO_WIDTH=""     # optional: resize logo to this pixel width (needs imagemagick);
+                  # leave empty to use the PNG as-is (pre-size it in an editor).
+                  # Panel resolution: cat /sys/class/graphics/fb0/virtual_size
 
 SRC=/usr/share/plymouth/themes/armbian
 DST=/usr/share/plymouth/themes/tricca
@@ -38,8 +41,12 @@ set_key HorizontalAlignment .5
 set_key VerticalAlignment "$THROB_V"
 
 if [ -n "$LOGO" ] && [ -f "$LOGO" ]; then
-  install -m 0644 "$LOGO" "$DST/watermark.png"
-  install -m 0644 "$LOGO" "$DST/bgrt-fallback.png"
+  if [ -n "$LOGO_WIDTH" ] && command -v convert >/dev/null 2>&1; then
+    convert "$LOGO" -resize "''${LOGO_WIDTH}x" "$DST/watermark.png"
+  else
+    install -m 0644 "$LOGO" "$DST/watermark.png"
+  fi
+  cp "$DST/watermark.png" "$DST/bgrt-fallback.png"
 fi
 
 plymouth-set-default-theme -R tricca
