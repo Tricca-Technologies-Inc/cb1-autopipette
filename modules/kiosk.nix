@@ -46,11 +46,12 @@ let
     done
     if [ -e /sys/devices/platform/bootsplash.0/enabled ]; then
       echo 0 > /sys/devices/platform/bootsplash.0/enabled || true
-    elif command -v plymouth >/dev/null 2>&1; then
-      # --retain-splash leaves the splash image in the framebuffer; X below
-      # starts with "-background none" so the logo persists until Chromium
-      # paints — no black gap, no white flash.
-      plymouth quit --retain-splash || true
+    elif [ -x /usr/bin/plymouth ]; then
+      # ABSOLUTE path, not `command -v`: the unit's PATH is nix-store-only,
+      # so PATH lookups can never find apt binaries — the check silently
+      # fails, plymouthd keeps the VT/DRM, and X dies instantly.
+      # (Same failure class as moonraker needing iproute2 on its path.)
+      /usr/bin/plymouth quit --retain-splash || true
     fi
   '';
 
