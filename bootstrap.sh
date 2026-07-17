@@ -61,6 +61,10 @@ echo "==> [6/6] boot splash (armbianEnv.txt/initramfs live in /boot — outside 
 # initramfs. Legacy blob-based images (kernel <5.19) are documented in
 # splash/README.md but not supported by this script.
 bash "$REPO_DIR/splash/install-tricca-theme.sh" "$LOGO"
+# Debian's plymouth-quit units kill the splash at multi-user — before the
+# kiosk's retain-splash handoff — exposing console text. Mask them: the
+# kiosk service is the only thing allowed to end the splash.
+systemctl mask plymouth-quit.service plymouth-quit-wait.service
 # bootlogo=true makes Armbian's boot.cmd emit "splash plymouth.ignore-serial-consoles"
 # (bootlogo=false yields "splash=verbose" and plymouth never starts).
 grep -q '^bootlogo=' /boot/armbianEnv.txt \

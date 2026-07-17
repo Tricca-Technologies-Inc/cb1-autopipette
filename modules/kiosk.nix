@@ -60,6 +60,22 @@ let
 in
 {
   config = {
+    # Debian's plymouth-quit.service kills the splash as soon as boot
+    # "finishes" — before the kiosk starts — which un-does the retain-splash
+    # handoff and lets console text + Chromium's white first paint show.
+    # Neutralize both units (ConditionPathExists never true); the kiosk's
+    # pre-script is then the only thing that quits plymouth.
+    # Note: if the kiosk ever fails to start, the splash stays on screen —
+    # debugging is via SSH/serial by design.
+    environment.etc."systemd/system/plymouth-quit.service.d/tricca.conf".text = ''
+      [Unit]
+      ConditionPathExists=/nonexistent
+    '';
+    environment.etc."systemd/system/plymouth-quit-wait.service.d/tricca.conf".text = ''
+      [Unit]
+      ConditionPathExists=/nonexistent
+    '';
+
     systemd.services.kiosk = {
       description = "Chromium kiosk for AutoPipette UI";
       # multi-user.target, NOT graphical.target: the minimal Armbian image's
