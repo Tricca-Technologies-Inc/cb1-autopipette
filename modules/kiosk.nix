@@ -24,10 +24,11 @@ let
     xset s off
     xset -dpms
     xset s noblank
-    xsetroot -solid black
+    # NO xsetroot here: it would paint over the retained splash frame that
+    # "-background none" preserves — the logo should survive until Chromium paints.
     exec /usr/bin/chromium \
       --kiosk \
-      --default-background-color=000000 \
+      --default-background-color=00000000 \
       --noerrdialogs \
       --disable-infobars \
       --disable-session-crashed-bubble \
