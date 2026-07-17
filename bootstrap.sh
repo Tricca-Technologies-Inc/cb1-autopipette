@@ -77,6 +77,13 @@ else
   grep -q '^bootlogo=' /boot/armbianEnv.txt \
     && sed -i 's/^bootlogo=.*/bootlogo=true/' /boot/armbianEnv.txt \
     || echo 'bootlogo=true' >> /boot/armbianEnv.txt
+  # Clean panel: boot console to serial only, quiet kernel. Local debugging
+  # is then SSH/serial-only — deliberate trade for a kiosk appliance.
+  grep -q '^console=' /boot/armbianEnv.txt \
+    && sed -i 's/^console=.*/console=serial/' /boot/armbianEnv.txt \
+    || echo 'console=serial' >> /boot/armbianEnv.txt
+  grep -q '^extraargs=' /boot/armbianEnv.txt \
+    || echo 'extraargs=quiet loglevel=0' >> /boot/armbianEnv.txt
   update-initramfs -u
 fi
 

@@ -24,8 +24,10 @@ let
     xset s off
     xset -dpms
     xset s noblank
+    xsetroot -solid black
     exec /usr/bin/chromium \
       --kiosk \
+      --default-background-color=000000 \
       --noerrdialogs \
       --disable-infobars \
       --disable-session-crashed-bubble \
@@ -45,12 +47,15 @@ let
     if [ -e /sys/devices/platform/bootsplash.0/enabled ]; then
       echo 0 > /sys/devices/platform/bootsplash.0/enabled || true
     elif command -v plymouth >/dev/null 2>&1; then
-      plymouth quit || true
+      # --retain-splash leaves the splash image in the framebuffer; X below
+      # starts with "-background none" so the logo persists until Chromium
+      # paints — no black gap, no white flash.
+      plymouth quit --retain-splash || true
     fi
   '';
 
   kioskScript = pkgs.writeShellScript "kiosk-start" ''
-    exec /usr/bin/xinit ${xinitrc} -- /usr/bin/X :0 vt1 -nolisten tcp -nocursor
+    exec /usr/bin/xinit ${xinitrc} -- /usr/bin/X :0 vt1 -background none -nolisten tcp -nocursor
   '';
 in
 {
