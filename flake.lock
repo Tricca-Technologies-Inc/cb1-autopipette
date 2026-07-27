@@ -108,11 +108,11 @@
     "printer-cfgs": {
       "flake": false,
       "locked": {
-        "lastModified": 1785182198,
-        "narHash": "sha256-yGx7sAcgHyLJMyyabXN8jTBta5MlY5YpeqZlm+lih0o=",
+        "lastModified": 1785183435,
+        "narHash": "sha256-7LRUMc54NEGsw+rdjIUktY0ASazZq8xDZbKDfl2EOC0=",
         "owner": "Tricca-Technologies-Inc",
         "repo": "Tricca_Autopipette_Configs",
-        "rev": "dd4d2d69121afdc04e6e7721231592e64f7f184f",
+        "rev": "c2b20eede4fa1b4c0d1703824b8f75716f8fb33b",
         "type": "github"
       },
       "original": {
