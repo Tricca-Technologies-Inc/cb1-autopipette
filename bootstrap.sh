@@ -31,12 +31,13 @@ apt-get install -y \
   chromium \
   plymouth plymouth-themes armbian-plymouth-theme \
   imagemagick \
-  policykit-1 \
+  polkitd \
   curl git
-# policykit-1: without it, Moonraker warns "Unable to find DBus PolKit
-# Interface" and Mainsail's own reboot/shutdown/service-restart buttons
-# silently fail (the kiosk app never calls those endpoints, so this is
-# cosmetic for normal operation, but Mainsail is the backup control path).
+# polkitd (the policykit-1 metapackage was split/renamed in Debian trixie):
+# without it, Moonraker warns "Unable to find DBus PolKit Interface" and
+# Mainsail's own reboot/shutdown/service-restart buttons silently fail (the
+# kiosk app never calls those endpoints, so this is cosmetic for normal
+# operation, but Mainsail is the backup control path).
 
 echo "==> [3/6] service user"
 if ! id pipette >/dev/null 2>&1; then
