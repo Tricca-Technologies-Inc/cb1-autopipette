@@ -44,6 +44,12 @@ if ! id pipette >/dev/null 2>&1; then
   adduser --system --group --home /var/lib/autopipette --shell /usr/sbin/nologin pipette
 fi
 usermod -aG dialout,video,input,tty pipette   # serial for klipper; video/input/tty for X on tty1
+# moonraker.service (modules/klipper.nix) adds this as a SupplementaryGroup
+# on itself specifically -- not pipette generally -- so the PolicyKit rule
+# in moonraker.rules can grant reboot/shutdown/service-restart to just that
+# process, not to the network-facing autopipette/tapd/kiosk services that
+# also run as pipette.
+groupadd -f moonraker-admin
 
 echo "==> [4/6] Determinate Nix (multi-user, flakes enabled by default)"
 if ! command -v nix >/dev/null 2>&1; then

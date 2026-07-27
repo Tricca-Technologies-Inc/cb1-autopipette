@@ -60,6 +60,26 @@ in
 {
   config = {
     environment.etc."klipper/moonraker.conf".source = ../config/moonraker.conf;
+    # Without this, Moonraker warns "not authorized for PolicyKit action" and
+    # disables its reboot/shutdown/service-restart API (used by Mainsail's
+    # own UI buttons -- the backup control path if the kiosk is down). Scoped
+    # to the moonraker-admin supplementary group (see the moonraker service's
+    # SupplementaryGroups below), not the pipette user generally, since
+    # autopipette/tapd/kiosk also run as pipette and are network-facing.
+    environment.etc."polkit-1/rules.d/moonraker.rules".text = ''
+      polkit.addRule(function(action, subject) {
+          if ((action.id == "org.freedesktop.systemd1.manage-units" ||
+               action.id == "org.freedesktop.login1.power-off" ||
+               action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+               action.id == "org.freedesktop.login1.reboot" ||
+               action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+               action.id == "org.freedesktop.login1.halt" ||
+               action.id == "org.freedesktop.login1.halt-multiple-sessions") &&
+              subject.isInGroup("moonraker-admin")) {
+              return polkit.Result.YES;
+          }
+      });
+    '';
 
     systemd.services = {
       # Klipper host MCU: a second klipper process on the CB1 itself, exposing
@@ -130,6 +150,13 @@ in
         '';
         serviceConfig = {
           User = user;
+          # Grants PolicyKit-gated reboot/shutdown/service-restart to THIS
+          # process specifically (see moonraker.rules below) -- not to the
+          # pipette user generally, since autopipette/tapd/kiosk also run as
+          # pipette and are network-facing; scoping to a supplementary group
+          # keeps that surface from also gaining host-reboot capability.
+          # Group must already exist (bootstrap.sh: groupadd -f moonraker-admin).
+          SupplementaryGroups = [ "moonraker-admin" ];
           ExecStart = ''
             ${pkgs.moonraker}/bin/moonraker \
               --datapath /var/lib/moonraker \
