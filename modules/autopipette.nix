@@ -15,8 +15,9 @@ in
     systemd.services.autopipette = {
       description = "Tricca AutoPipette FastAPI backend";
       wantedBy = [ "multi-user.target" ];
-      after = [ "moonraker.service" "network.target" ];
+      after = [ "moonraker.service" "network.target" "tapd.service" ];
       wants = [ "moonraker.service" ];
+      requires = [ "tapd.service" ];
       preStart = ''
         mkdir -p /var/lib/autopipette
         # Seed protocols from the pinned source once; operators add/edit

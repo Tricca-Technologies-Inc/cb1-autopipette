@@ -46,6 +46,7 @@
           ./modules/base.nix
           ./modules/networking.nix
           ./modules/klipper.nix
+          ./modules/tapd.nix
           ./modules/autopipette.nix
           ./modules/kiosk.nix
           ./modules/aliases.nix
