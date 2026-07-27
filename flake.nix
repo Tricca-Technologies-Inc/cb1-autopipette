@@ -38,6 +38,15 @@
         mcu = "host";
         firmwareConfig = ./config/klipper-host-mcu.config;
       };
+      # Manta M8P V2.0 board firmware, built from the SAME pinned Klipper
+      # source as klippy/klipperHostMcu -- keeps the physical board's
+      # firmware from drifting out of sync with the host (see README field
+      # notes: "MCU has deprecated code" means the board needs reflashing).
+      # Flashing itself is still manual; this only produces the binary.
+      mantaFirmware = pkgs.klipper-firmware.override {
+        mcu = "manta-m8p-v2";
+        firmwareConfig = ./config/klipper-manta-mcu.config;
+      };
     in
     {
       # Applied with:  sudo -i nix run 'github:numtide/system-manager' -- switch --flake /opt/cb1-autopipette
@@ -55,7 +64,7 @@
       };
 
       packages.${system} = {
-        inherit tricca-autopipette;
+        inherit tricca-autopipette mantaFirmware;
         default = tricca-autopipette;
       };
     };
