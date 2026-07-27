@@ -111,3 +111,17 @@ doesn't say why, that's a bug in the repo.
   check); keep the repo root-owned and use the helpers.
 - **`warning: unknown setting 'eval-cores'/'lazy-trees'`** — harmless
   Determinate-Nix settings read by upstream Nix components.
+- **`mcu 'mcu': Unable to connect` at Klipper startup means a serial-ID
+  mismatch, not a wiring/permissions problem.** The Manta's USB serial ID is
+  unique per physical board, so it can never live in the shared
+  `tricca-autopipette.cfg` macros file — `bootstrap.sh` now auto-detects it
+  from `/dev/serial/by-id/usb-Klipper_*` and writes it into printer.cfg
+  (machine-owned) instead. Check `dmesg | grep -i acm` and
+  `/dev/serial/by-id/` against printer.cfg's `[mcu]` section if this recurs.
+- **A Python package's `Path(__file__).parents[N]` repo-root trick breaks once
+  installed.** `tricca_autopipette`'s `DefaultPaths.DIR_REPO_ROOT` assumed a
+  `src/`-layout git checkout; any installed package (Nix, pip, wheel) drops
+  the `src/` segment and the count comes up one directory short, with no
+  `config/`/`protocols/`/`gcode/` underneath. Fixed upstream via
+  `AUTOPIPETTE_REPO_ROOT` (Tricca_AutoPipette@cbd16de); `modules/tapd.nix`
+  sets it to `/var/lib/autopipette`.

@@ -56,6 +56,28 @@ udevadm control --reload-rules
 udevadm trigger --subsystem-match=net
 systemctl restart NetworkManager
 
+echo "==> Detecting Manta M8P MCU serial ID"
+# USB serial IDs are unique per physical board, so tricca-autopipette.cfg
+# (shared across every machine) intentionally carries no [mcu] section --
+# baking one machine's ID in there breaks every other machine's Klipper<->MCU
+# connection at startup ("mcu 'mcu': Unable to connect"). Write it into
+# printer.cfg instead, which the switch above just seeded fresh (first-boot
+# only, then machine-owned -- never touched again by later switches).
+mapfile -t MCU_CANDIDATES < <(ls /dev/serial/by-id/usb-Klipper_* 2>/dev/null || true)
+if [ "${#MCU_CANDIDATES[@]}" -eq 1 ]; then
+  MCU_SERIAL="${MCU_CANDIDATES[0]}"
+  printf '\n[mcu]\nserial: %s\n' "$MCU_SERIAL" >> /var/lib/moonraker/config/printer.cfg
+  echo "    MCU serial set: $MCU_SERIAL"
+elif [ "${#MCU_CANDIDATES[@]}" -eq 0 ]; then
+  echo "    WARNING: no Klipper MCU found on USB. Plug in the Manta M8P, then:" >&2
+  echo "      ls /dev/serial/by-id/   # find the usb-Klipper_... entry" >&2
+  echo "      append [mcu] / serial: <that path> to /var/lib/moonraker/config/printer.cfg" >&2
+else
+  echo "    WARNING: multiple Klipper MCUs found on USB -- pick the right one:" >&2
+  printf '      %s\n' "${MCU_CANDIDATES[@]}" >&2
+  echo "    append [mcu] / serial: <path> to /var/lib/moonraker/config/printer.cfg" >&2
+fi
+
 echo "==> [6/6] boot splash (armbianEnv.txt/initramfs live in /boot — outside system-manager's reach)"
 # Owned 'tricca' plymouth theme: watermark + throbber below it. Rebuilds the
 # initramfs. Legacy blob-based images (kernel <5.19) are documented in
@@ -82,7 +104,8 @@ echo
 echo "Bootstrap done. Remaining per-machine steps:"
 echo "  1. wifi:   sudo nmcli device wifi connect \"SSID\" password \"PASS\" ifname wlan0"
 echo "             (persists in NetworkManager; credentials never enter the repo)"
-echo "  2. MCU:    set the Manta serial ID via Mainsail's config editor after first boot"
+echo "  2. MCU:    serial ID auto-detected above -- if it warned (no/multiple"
+echo "             devices found), set it manually via Mainsail's config editor"
 echo "  3. reboot, then log in again — shell helpers (switch, splash-preview, ...) load"
 echo "             from /etc/profile.d/tricca-aliases.sh; see README 'Shell helpers'"
 echo
