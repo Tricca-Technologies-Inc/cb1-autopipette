@@ -68,6 +68,13 @@ on every machine (log out/in after the first switch to pick them up):
 - `logs [unit]` — follow a unit's journal (default: autopipette)
 - `ap-restart` — restart klipper/moonraker/autopipette/kiosk after config edits
 - `gc` — delete Nix generations older than 30 days (SD-card hygiene)
+- `flash-manta` — reflash the Manta M8P V2.0's board firmware from the
+  pinned Klipper source (fixes "MCU has deprecated code" drift warnings).
+  Verified end-to-end on marie 2026-07-27: requests the bootloader over the
+  running Klipper connection, board reboots into the STM32 ROM DFU
+  (masked in silicon — a failed/interrupted write can't brick it, just
+  re-run), writes via `dfu-util` at the 128KiB-bootloader offset, board
+  reboots back into the new firmware automatically.
 
 Updating pinned software: `nix flake update` (or `nix flake update tricca-src`
 for just the app) on a desktop, commit `flake.lock`, push, `switch` on each

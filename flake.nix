@@ -60,7 +60,7 @@
           ./modules/kiosk.nix
           ./modules/aliases.nix
         ];
-        extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu; };
+        extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware; };
       };
 
       packages.${system} = {
