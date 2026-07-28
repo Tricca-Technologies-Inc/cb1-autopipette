@@ -58,6 +58,7 @@
           ./modules/tapd.nix
           ./modules/autopipette.nix
           ./modules/kiosk.nix
+          ./modules/tricca-console.nix
           ./modules/aliases.nix
         ];
         extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware; };
