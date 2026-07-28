@@ -22,7 +22,22 @@ built it doubles as design history, and README.md is the operator doc.
 - Everything else is Nix via numtide/system-manager (`systemConfigs.default`;
   per-machine hook: `systemConfigs."<hostname>"`). Services: klipper-mcu
   (host MCU, same pinned src as klippy), klipper, moonraker, mainsail-nginx
-  (:80), autopipette (:8000), kiosk, plus /etc files and shell helpers.
+  (:80), tapd (control daemon, owns the Moonraker connection), autopipette
+  (:8000, thin kiosk client of tapd's control-plane websocket), kiosk, plus
+  /etc files and shell helpers.
+- tapd (from tricca-src) is a long-running control daemon holding the single
+  persistent Moonraker connection; `tap` (interactive shell) and the kiosk
+  are both thin clients of its control-plane websocket
+  (ws://127.0.0.1:8765/control) instead of talking to Moonraker or spawning
+  subprocesses themselves. Needs `AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette`
+  (modules/tapd.nix) since tricca_autopipette's path defaults assume a
+  src-layout checkout, which breaks for any installed package.
+- Manta M8P V2.0 board firmware (STM32H723) drifts from the host's pinned
+  Klipper version over time ("MCU has deprecated code" warnings) since it's
+  flashed once and never auto-updated. `mantaFirmware` (flake.nix) builds a
+  correct binary from the same pinned source; `flash-manta` (shell helper)
+  flashes it via the board's STM32 ROM DFU bootloader (masked in silicon —
+  can't be bricked by a bad write).
 - printer.cfg seeds ONCE from printer-cfgs into /var/lib/moonraker/config/,
   then is machine-owned (SAVE_CONFIG + Mainsail editor rewrite it).
 - Wifi: NetworkManager persistent profile, created manually per machine.
@@ -39,7 +54,8 @@ built it doubles as design history, and README.md is the operator doc.
 - Deploy to a machine: `switch` (shell helper) =
   `sudo -i nix run 'github:numtide/system-manager' -- switch --flake /opt/cb1-autopipette`
 - Helpers (modules/aliases.nix → /etc/profile.d): `switch`,
-  `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`
+  `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
+  `flash-manta` (reflash the Manta board firmware, see Architecture)
 - Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs]`,
   commit flake.lock, push; machines `git pull && switch`. Never edit the
   lock on a machine.
@@ -69,23 +85,46 @@ built it doubles as design history, and README.md is the operator doc.
    desktop (qemu binfmt) + `nix copy` (needs trusted-users + same lock).
 9. Python is 3.14 (nixpkgs-unstable default); pyproject says >=3.12.
    opencv-python is satisfied by nixpkgs opencv4 via pythonRemoveDeps.
+10. `environment.etc` always creates a symlink into the Nix store.
+    `polkitd` (and possibly other daemons that scan a directory for
+    config-like files) silently SKIPS symlinks — no error, it just never
+    gets read. If a file placed via `environment.etc` doesn't seem to take
+    effect and there's no error anywhere, suspect this first; install it via
+    a `preStart` copy (`cp`, not `ln -s`) instead.
+11. PolicyKit's `subject.isInGroup()` checks the user ACCOUNT's static
+    `/etc/group` membership (NSS), not a process-level systemd
+    `SupplementaryGroups=` grant. A service-scoped supplementary group
+    (granted to one unit, not the user account) is invisible to
+    `isInGroup()` — use the `/proc/<pid>/status`-grep technique instead
+    (see Moonraker's own `scripts/set-policykit-rules.sh` for the pattern
+    modules/klipper.nix now follows).
 
 ## Current machine
 
-`marie` — Armbian 26.2.1, kernel 6.18.33-current-sunxi64 (post-upgrade),
-all services green, boot experience shipped 2026-07-17.
+`marie` — Armbian 26.5.1 trixie, kernel 6.18.33-current-sunxi64, all
+services green (klipper-mcu, klipper, moonraker, tapd, autopipette, kiosk,
+mainsail-nginx). Manta M8P V2.0 firmware reflashed 2026-07-28 to match the
+pinned Klipper source (was severely behind — v0.11.0 firmware against a
+0.13.0-unstable host). PolicyKit fully configured (Mainsail's
+reboot/shutdown buttons work as a backup control path if the kiosk is
+down) — verified end-to-end across two real power cycles.
 
-## State: build DONE, first hardware run PENDING
+## State: tapd control daemon shipped and verified; live hardware runs in progress
 
-The single unverified seam: the kiosk's protocol bridge. autopipette_kiosk
-runs protocols by spawning `python -m tricca_autopipette.cli.main
---local-connect` and piping `run <protocol>\nquit\n` to the cmd2 shell
-(verified importable, never executed against the gantry). Next session:
-smallest protocol from the touchscreen, nothing valuable under the pipette,
-`logs autopipette` open (the shell's .init_pipette startup script output
-lands there). Expect the first failures HERE. The owner's own TODO notes a
-direct Python call into the AutoPipette class as the better long-term bridge
-than the subprocess.
+The old subprocess-bridge architecture (kiosk spawning `tap` as a
+subprocess) is GONE, replaced by tapd (see Architecture) — this was the
+owner's own TODO from the last session, now done and pinned. Verified:
+kiosk correctly lists `/protocols` and reports `/status` through tapd's
+control-plane websocket, homing succeeded, Mainsail jog commands worked
+after the MCU serial fix. Not yet verified: a complete, successful
+liquid-handling run of a real `.pipette` protocol through the kiosk. Two
+things surfaced during initial live testing that are still open:
+- A hardware homing issue (Z-axis endstop) the owner called "a known issue"
+  and is handling themselves — not a software/deployment bug.
+- At least one `.pipette` protocol file has an argument-order mistake
+  (flags before positional args cause `--prewet N` to swallow the transfer
+  volume) — a protocol-authoring bug, not a tricca_autopipette bug. Worth
+  checking other `.pipette` files for the same mistake before a real run.
 
 ## Style for this project
 
