@@ -32,6 +32,15 @@ built it doubles as design history, and README.md is the operator doc.
   subprocesses themselves. Needs `AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette`
   (modules/tapd.nix) since tricca_autopipette's path defaults assume a
   src-layout checkout, which breaks for any installed package.
+- tty2 is a debug console (modules/tricca-console.nix): Ctrl+Alt+F2
+  autologs in as `tricca` (the existing admin/SSH account, no password) and
+  execs `tap` instead of a normal shell — a fast path back to control if
+  the kiosk (tty1) is misbehaving. Deliberately NOT done by changing
+  tricca's `/etc/passwd` shell (that would hijack SSH logins on the same
+  account too); instead a profile.d script execs tap only when the tty is
+  a physical console (tty2+), never a pts/SSH session. tty1 stays
+  kiosk-only; if the kiosk dies and getty@tty1 comes back, that login is
+  left as a normal shell (recovery path).
 - Manta M8P V2.0 board firmware (STM32H723) drifts from the host's pinned
   Klipper version over time ("MCU has deprecated code" warnings) since it's
   flashed once and never auto-updated. `mantaFirmware` (flake.nix) builds a
@@ -107,7 +116,12 @@ mainsail-nginx). Manta M8P V2.0 firmware reflashed 2026-07-28 to match the
 pinned Klipper source (was severely behind — v0.11.0 firmware against a
 0.13.0-unstable host). PolicyKit fully configured (Mainsail's
 reboot/shutdown buttons work as a backup control path if the kiosk is
-down) — verified end-to-end across two real power cycles.
+down) — verified end-to-end across two real power cycles. tty2 debug
+console (autologin `tricca` → `tap`, see Architecture) shipped and
+verified live 2026-07-28: autologin confirmed passwordless, tap process
+confirmed connected to tapd's control-plane socket via `ss`, session
+respawn-into-fresh-tap confirmed by killing the tap process, SSH as
+`tricca` confirmed still a normal shell.
 
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
