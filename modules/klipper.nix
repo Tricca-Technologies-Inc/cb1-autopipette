@@ -56,30 +56,39 @@ let
       }
     }
   '';
+
+  # Without this, Moonraker warns "not authorized for PolicyKit action" and
+  # disables its reboot/shutdown/service-restart API (used by Mainsail's own
+  # UI buttons -- the backup control path if the kiosk is down). Scoped to
+  # the moonraker-admin supplementary group (see moonraker's
+  # SupplementaryGroups below), not the pipette user generally, since
+  # autopipette/tapd/kiosk also run as pipette and are network-facing.
+  #
+  # NOT installed via environment.etc: that always creates a symlink into
+  # the Nix store, and polkitd silently SKIPS symlinks when scanning
+  # /etc/polkit-1/rules.d/ -- no error logged, it just never counts toward
+  # "Finished loading, compiling and executing N rules". Verified live on
+  # marie 2026-07-27: a plain regular file in that directory got picked up
+  # (rule count 4->5, pkcheck succeeded); the symlinked version never did.
+  # So moonraker's preStart below copies this into place as a real file.
+  moonrakerPolkitRules = pkgs.writeText "moonraker.rules" ''
+    polkit.addRule(function(action, subject) {
+        if ((action.id == "org.freedesktop.systemd1.manage-units" ||
+             action.id == "org.freedesktop.login1.power-off" ||
+             action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+             action.id == "org.freedesktop.login1.reboot" ||
+             action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+             action.id == "org.freedesktop.login1.halt" ||
+             action.id == "org.freedesktop.login1.halt-multiple-sessions") &&
+            subject.isInGroup("moonraker-admin")) {
+            return polkit.Result.YES;
+        }
+    });
+  '';
 in
 {
   config = {
     environment.etc."klipper/moonraker.conf".source = ../config/moonraker.conf;
-    # Without this, Moonraker warns "not authorized for PolicyKit action" and
-    # disables its reboot/shutdown/service-restart API (used by Mainsail's
-    # own UI buttons -- the backup control path if the kiosk is down). Scoped
-    # to the moonraker-admin supplementary group (see the moonraker service's
-    # SupplementaryGroups below), not the pipette user generally, since
-    # autopipette/tapd/kiosk also run as pipette and are network-facing.
-    environment.etc."polkit-1/rules.d/moonraker.rules".text = ''
-      polkit.addRule(function(action, subject) {
-          if ((action.id == "org.freedesktop.systemd1.manage-units" ||
-               action.id == "org.freedesktop.login1.power-off" ||
-               action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
-               action.id == "org.freedesktop.login1.reboot" ||
-               action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
-               action.id == "org.freedesktop.login1.halt" ||
-               action.id == "org.freedesktop.login1.halt-multiple-sessions") &&
-              subject.isInGroup("moonraker-admin")) {
-              return polkit.Result.YES;
-          }
-      });
-    '';
 
     systemd.services = {
       # Klipper host MCU: a second klipper process on the CB1 itself, exposing
@@ -147,6 +156,18 @@ in
         preStart = ''
           mkdir -p /var/lib/moonraker
           chown -R ${user} /var/lib/moonraker
+
+          mkdir -p /etc/polkit-1/rules.d
+          # Force a real file: if a prior switch left the old symlinked
+          # version in place, `cmp` would follow it and (mis)report the
+          # content as unchanged, leaving the broken symlink in place.
+          if [ -L /etc/polkit-1/rules.d/moonraker.rules ] || \
+             ! cmp -s ${moonrakerPolkitRules} /etc/polkit-1/rules.d/moonraker.rules; then
+            rm -f /etc/polkit-1/rules.d/moonraker.rules
+            cp ${moonrakerPolkitRules} /etc/polkit-1/rules.d/moonraker.rules
+            chmod 644 /etc/polkit-1/rules.d/moonraker.rules
+            /usr/bin/systemctl try-restart polkit.service || true
+          fi
         '';
         serviceConfig = {
           User = user;
