@@ -71,17 +71,38 @@ let
   # marie 2026-07-27: a plain regular file in that directory got picked up
   # (rule count 4->5, pkcheck succeeded); the symlinked version never did.
   # So moonraker's preStart below copies this into place as a real file.
+  #
+  # NOT using subject.isInGroup("moonraker-admin") despite that reading
+  # cleaner: isInGroup() checks the USER ACCOUNT's static /etc/group
+  # membership, not a process-level systemd SupplementaryGroups= grant --
+  # since pipette is deliberately never added to moonraker-admin itself
+  # (that's the whole point of scoping it to moonraker's unit only),
+  # isInGroup() can never see it and always returns false. Verified this
+  # exact failure live via a byte-for-byte reproduction of Moonraker's own
+  # CheckAuthorization D-Bus call (dbus_manager.py's real subject: pid +
+  # start-time), isolating it down to this one method call. The official
+  # Moonraker install script (scripts/set-policykit-rules.sh) avoids this
+  # by grepping the live /proc/<pid>/status Groups line instead -- doing
+  # the same here, confirmed working with the same reproduction test.
   moonrakerPolkitRules = pkgs.writeText "moonraker.rules" ''
+    var MOONRAKER_ADMIN_GID = polkit.spawn(["getent", "group", "moonraker-admin"]).trim().split(":")[2];
+
     polkit.addRule(function(action, subject) {
-        if ((action.id == "org.freedesktop.systemd1.manage-units" ||
-             action.id == "org.freedesktop.login1.power-off" ||
-             action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
-             action.id == "org.freedesktop.login1.reboot" ||
-             action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
-             action.id == "org.freedesktop.login1.halt" ||
-             action.id == "org.freedesktop.login1.halt-multiple-sessions") &&
-            subject.isInGroup("moonraker-admin")) {
-            return polkit.Result.YES;
+        if (action.id == "org.freedesktop.systemd1.manage-units" ||
+            action.id == "org.freedesktop.login1.power-off" ||
+            action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+            action.id == "org.freedesktop.login1.reboot" ||
+            action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+            action.id == "org.freedesktop.login1.halt" ||
+            action.id == "org.freedesktop.login1.halt-multiple-sessions") {
+            var regex = "^Groups:.+?\\s" + MOONRAKER_ADMIN_GID + "[\\s\\0]";
+            var cmdpath = "/proc/" + subject.pid.toString() + "/status";
+            try {
+                polkit.spawn(["grep", "-Po", regex, cmdpath]);
+                return polkit.Result.YES;
+            } catch (error) {
+                return polkit.Result.NOT_HANDLED;
+            }
         }
     });
   '';
