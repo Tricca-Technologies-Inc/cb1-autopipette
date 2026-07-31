@@ -1,7 +1,7 @@
 # Shell helpers on every machine, managed by Nix (not bootstrap) so the
 # whole fleet gets updates via `switch`. Sourced by login shells from
 # /etc/profile.d/. Functions rather than aliases so they can take arguments.
-{ pkgs, mantaFirmware, ... }:
+{ pkgs, mantaFirmware, system-managerRev, ... }:
 let
   # flashtool.py (vendored in Klipper's own source) can trigger the board's
   # built-in "jump to bootloader" request over the currently-running Klipper
@@ -16,9 +16,13 @@ in
     environment.etc."profile.d/tricca-aliases.sh".text = ''
       # Tricca AutoPipette shell helpers (nix-managed — edit in the deploy repo)
 
-      # Apply the flake to this machine
+      # Apply the flake to this machine. Pinned to the exact system-manager
+      # rev in flake.lock (bump: nix flake update system-manager) -- an
+      # unpinned `nix run github:numtide/system-manager` floats to upstream's
+      # latest commit, which can drift out of sync with the system-manager
+      # LIBRARY pinned below (used to build the config this CLI activates).
       switch() {
-        sudo -i nix run 'github:numtide/system-manager' -- switch --flake /opt/cb1-autopipette
+        sudo -i nix run "github:numtide/system-manager/${system-managerRev}" -- switch --flake /opt/cb1-autopipette
       }
 
       # Preview the boot splash for N seconds (default 5), then restore the kiosk

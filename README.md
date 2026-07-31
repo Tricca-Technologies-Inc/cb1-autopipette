@@ -132,3 +132,23 @@ doesn't say why, that's a bug in the repo.
   `config/`/`protocols/`/`gcode/` underneath. Fixed upstream via
   `AUTOPIPETTE_REPO_ROOT` (Tricca_AutoPipette@cbd16de); `modules/tapd.nix`
   sets it to `/var/lib/autopipette`.
+- **`Error during activation: EOF while parsing a value at line 1 column 0`
+  while "Reading etc file definitions" means a 0-byte manifest, not a config
+  error.** `wc -c` the generation's `etcFiles.json`/`services.json` under its
+  store path to confirm. Cause: a build got interrupted (OOM-prone on the
+  CB1's 1GB RAM) leaving Nix's local store DB marking an output "valid" when
+  it's actually empty/corrupt. `nix store verify --repair` can't fix this —
+  these are local-only derivations with no substituter to re-fetch from, so
+  it just reports the mismatch and exits 0. The real fix is forcing a genuine
+  local rebuild of the whole closure: `nix build .#systemConfigs.default
+  --repair -o <path>`, then `switch` again. Verify it's *not* hardware
+  bit-rot first: `dmesg` for I/O errors, and check whether the *currently
+  active* generation's copies of the same files are healthy (2026-07-30
+  incident: only outputs from the one bad build session were affected).
+- **`switch` pins the system-manager CLI to the exact rev in `flake.lock`
+  (`system-managerRev` in flake.nix), not upstream's latest.** An unpinned
+  `nix run github:numtide/system-manager` floats independently of the
+  system-manager *library* pinned in flake.lock (used to build the config
+  the CLI activates) — a real gap, though in the 2026-07-30 incident above
+  it turned out not to be the actual cause (pinning the CLI to the exact
+  flake.lock rev reproduced the identical corruption).

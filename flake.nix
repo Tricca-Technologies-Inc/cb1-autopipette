@@ -47,9 +47,17 @@
         mcu = "manta-m8p-v2";
         firmwareConfig = ./config/klipper-manta-mcu.config;
       };
+      # `switch` invokes the system-manager CLI via `nix run`, which floats
+      # to numtide/system-manager's latest commit unless pinned -- that CLI
+      # can drift out of sync with the system-manager LIBRARY pinned below
+      # (used to build the config it's activating). Pin the CLI to the exact
+      # same rev so `switch` always matches what flake.lock says.
+      system-managerRev = system-manager.rev;
     in
     {
-      # Applied with:  sudo -i nix run 'github:numtide/system-manager' -- switch --flake /opt/cb1-autopipette
+      # Applied with the `switch` shell alias (modules/aliases.nix), which
+      # pins the system-manager CLI to this same flake.lock rev:
+      #   sudo -i nix run "github:numtide/system-manager/<rev>" -- switch --flake /opt/cb1-autopipette
       systemConfigs.default = system-manager.lib.makeSystemConfig {
         modules = [
           ./modules/base.nix
@@ -61,7 +69,7 @@
           ./modules/tricca-console.nix
           ./modules/aliases.nix
         ];
-        extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware; };
+        extraSpecialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware system-managerRev; };
       };
 
       packages.${system} = {

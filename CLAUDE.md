@@ -61,11 +61,16 @@ built it doubles as design history, and README.md is the operator doc.
 ## Commands
 
 - Deploy to a machine: `switch` (shell helper) =
-  `sudo -i nix run 'github:numtide/system-manager' -- switch --flake /opt/cb1-autopipette`
+  `sudo -i nix run "github:numtide/system-manager/<rev>" -- switch --flake /opt/cb1-autopipette`
+  — `<rev>` is generated from `flake.lock`'s pinned `system-manager` input
+  (flake.nix's `system-managerRev`), NOT floating to upstream's latest. An
+  unpinned CLI invocation drifts out of sync with the system-manager
+  LIBRARY pinned in flake.lock (used to build the config the CLI
+  activates) — this bit us 2026-07-30, see README field notes.
 - Helpers (modules/aliases.nix → /etc/profile.d): `switch`,
   `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
   `flash-manta` (reflash the Manta board firmware, see Architecture)
-- Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs]`,
+- Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs|system-manager]`,
   commit flake.lock, push; machines `git pull && switch`. Never edit the
   lock on a machine.
 - New machine: flash Armbian minimal (kernel ≥6.x), ethernet,
