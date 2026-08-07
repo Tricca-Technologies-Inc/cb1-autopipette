@@ -21,9 +21,15 @@ let
   # tear down with no client — a silent ~1s restart loop.
   xinitrc = pkgs.writeScript "kiosk-xinitrc" ''
     #!/bin/sh
-    xset s off
-    xset -dpms
-    xset s noblank
+    # ABSOLUTE path, not bare `xset`: the kiosk unit's PATH is nix-store-only
+    # (same failure class as kioskPre's plymouth call below) -- a bare-name
+    # lookup fails silently and these three screen-blanking/DPMS/screensaver
+    # disables never actually ran. Found live on nick 2026-08-07 (three
+    # "xset: not found" lines in the boot journal, non-fatal since chromium
+    # still execs after, but the kiosk was blanking/screensaving anyway).
+    /usr/bin/xset s off
+    /usr/bin/xset -dpms
+    /usr/bin/xset s noblank
     # NO xsetroot here: it would paint over the retained splash frame that
     # "-background none" preserves — the logo should survive until Chromium paints.
     exec /usr/bin/chromium \
