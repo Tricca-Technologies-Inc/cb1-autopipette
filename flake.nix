@@ -75,6 +75,7 @@
       packages.${system} = {
         inherit tricca-autopipette mantaFirmware;
         default = tricca-autopipette;
+        # aarch64-linux-tricca-autopipette = (import nixpkgs { crossSystem = "aarch64-linux"; }).callPackage ./pkgs/tricca-autopipette.nix { src = tricca-src; };
       };
     };
 }

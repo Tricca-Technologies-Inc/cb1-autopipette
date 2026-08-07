@@ -32,7 +32,7 @@ apt-get install -y \
   plymouth plymouth-themes armbian-plymouth-theme \
   imagemagick \
   polkitd \
-  curl git
+  curl git jq
 # polkitd (the policykit-1 metapackage was split/renamed in Debian trixie):
 # without it, Moonraker warns "Unable to find DBus PolKit Interface" and
 # Mainsail's own reboot/shutdown/service-restart buttons silently fail (the
@@ -60,9 +60,22 @@ if ! command -v nix >/dev/null 2>&1; then
 fi
 
 echo "==> [5/6] first system-manager switch"
+# Pin the CLI to the exact system-manager rev in flake.lock -- same reason
+# as the `switch` alias (modules/aliases.nix): an unpinned `nix run
+# github:numtide/system-manager` floats to upstream's latest commit, which
+# can drift out of sync with the system-manager LIBRARY pinned below.
+SM_REV=$(jq -r '.nodes["system-manager"].locked.rev' "$REPO_DIR/flake.lock")
+# --accept-flake-config: system-manager's own flake.nix declares
+# nixConfig.extra-substituters = cache.numtide.com, which carries prebuilt
+# aarch64-linux binaries for the CLI. Without this flag Nix silently
+# ignores that substituter ("ignoring untrusted flake configuration
+# setting") and falls back to compiling the Rust CLI from source on-device
+# -- rustc/lto1 OOM-kill a 1 GB CB1 outright. Bit `nick`'s bootstrap
+# 2026-08-05 even WITH the rev pin above, since the pin alone doesn't
+# control which substituters get trusted.
 # (netplan takeover is handled declaratively: replaceExisting=true backs up
 #  any stock armbian.yaml to armbian.yaml.system-manager-backup)
-nix run 'github:numtide/system-manager' -- switch --flake "$REPO_DIR"
+nix run --accept-flake-config "github:numtide/system-manager/${SM_REV}" -- switch --flake "$REPO_DIR"
 netplan apply
 udevadm control --reload-rules
 udevadm trigger --subsystem-match=net

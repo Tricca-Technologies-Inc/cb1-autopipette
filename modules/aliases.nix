@@ -21,8 +21,14 @@ in
       # unpinned `nix run github:numtide/system-manager` floats to upstream's
       # latest commit, which can drift out of sync with the system-manager
       # LIBRARY pinned below (used to build the config this CLI activates).
+      # --accept-flake-config: system-manager's flake.nix declares
+      # nixConfig.extra-substituters = cache.numtide.com (prebuilt
+      # aarch64-linux binaries for the CLI). Without this flag Nix ignores
+      # that substituter and compiles the Rust CLI from source on-device --
+      # rustc/lto1 OOM-kill a 1 GB CB1 outright (bit `nick`'s bootstrap
+      # 2026-08-05, see bootstrap.sh).
       switch() {
-        sudo -i nix run "github:numtide/system-manager/${system-managerRev}" -- switch --flake /opt/cb1-autopipette
+        sudo -i nix run --accept-flake-config "github:numtide/system-manager/${system-managerRev}" -- switch --flake /opt/cb1-autopipette
       }
 
       # Preview the boot splash for N seconds (default 5), then restore the kiosk
