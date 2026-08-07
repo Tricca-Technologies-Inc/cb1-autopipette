@@ -165,11 +165,45 @@ oscillator — NOT the physical Manta board, so no motion-timing risk),
 most likely triggered by swap pressure (swap was actively in use 50+ min
 post-boot on this 969 MiB box; autopipette/moonraker/klipper had all hit
 swap since boot) — logged as a known 1 GB-RAM constraint per owner's
-call, not fixed. NOT yet done: boot splash setup
-(`splash/install-tricca-theme.sh`) and `netplan apply`/NetworkManager
-restart (bootstrap.sh's own step 6) — deliberately skipped to avoid
-disturbing the fragile hotspot connection; do these once `nick` is on
-stable wifi/ethernet.
+call, not fixed.
+
+Later the same day, splash setup and the netplan/NetworkManager step
+(bootstrap.sh's step 6 + tail) were done on nick, still over the hotspot
+(owner explicitly asked despite the risk). Netplan/NM restart: launched
+detached (`nohup ... & disown`) so it would survive the SSH channel
+dropping mid-restart — came back clean, wifi auto-reconnected. Splash:
+found and fixed a real bug doing this — `plymouth-set-default-theme -R`
+claimed success but never actually rebuilt the initramfs, because it
+shells out to `update-initramfs -u -k all`, and on this board `-k all`'s
+kernel autodetection finds nothing (exits 0 regardless, "Nothing to do,
+exiting."). Fixed nick's live `/boot` manually, then fixed
+`splash/install-tricca-theme.sh` itself to rebuild by exact kernel
+version and verify with `lsinitramfs` instead of trusting the tool's
+exit code (commit 65b3580) — `marie` has the same splash setup and
+hasn't been re-checked for this bug. Rebooted nick to confirm: clean
+boot, no crash-loop, every system-level splash indicator green (theme
+active, plymouth-quit masked, kernel cmdline has `splash`) — actual
+on-screen appearance not verified (needs eyes-on/photo, not done).
+
+The reboot's journal surfaced two more instances of the same nix-store-
+only-PATH bug class (rule #1), both fixed/deployed/verified same day:
+kiosk-xinitrc's three `xset` calls (screen blanking/DPMS/screensaver)
+were silently never running — absolute-pathed `/usr/bin/xset` (commit
+0e0f97d), consistent with `kioskPre`'s existing `/usr/bin/plymouth`
+call since this is our own script. And moonraker's `preStart` polkit-
+rules idempotency check (`cmp`) was silently failing every boot,
+meaning the rules file was rewritten unconditionally instead of only on
+change — `cmp` is from `diffutils`, not covered by the unit's existing
+`pkgs.iproute2` (added for `ip`); added `pkgs.diffutils` too (commit
+40a4f00). Verifying this one needed an explicit `systemctl restart
+moonraker` (a plain switch reloads the unit file but doesn't restart an
+already-running process), then confirmed directly: `cmp` resolves and
+exits 0 under moonraker's exact unit PATH.
+
+nick is fully current as of this session: repo at commit 40a4f00, all 7
+services green, still on the mobile hotspot (`ip -br link` shows no
+wired NIC at all, PHY still undetected — worth a hands-on hardware
+look).
 
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
