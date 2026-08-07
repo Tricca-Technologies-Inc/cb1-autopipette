@@ -147,15 +147,28 @@ in
               install -m 0644 -o ${user} "$f" /var/lib/moonraker/config/
             done
           fi
+          # klippy starts before moonraker (moonraker `after`s klipper), so
+          # moonraker hasn't created its own data-dir tree yet -- make the
+          # logs dir ourselves or klippy's --logfile open below fails on a
+          # fresh machine.
+          mkdir -p /var/lib/moonraker/logs
           chown -R ${user} /var/lib/moonraker /run/klipper
         '';
         serviceConfig = {
           User = user;
           Group = "dialout";
+          # Without --logfile klippy runs with no persistent log at all --
+          # journalctl only has its own INFO lines, and klippy itself warns
+          # "No log file specified! Severe timing issues may result!" on
+          # every start. Found live on nick 2026-08-07 while auditing logs
+          # for warnings: no klippy.log existed anywhere on the machine.
+          # Path matches moonraker's own log dir (/var/lib/moonraker/logs/)
+          # so Mainsail's log viewer picks it up too.
           ExecStart = ''
             ${pkgs.klipper}/bin/klippy \
               --input-tty=/run/klipper/tty \
               --api-server=/run/klipper/api \
+              --logfile=/var/lib/moonraker/logs/klippy.log \
               /var/lib/moonraker/config/printer.cfg
           '';
           Restart = "always";
