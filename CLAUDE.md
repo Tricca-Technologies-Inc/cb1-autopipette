@@ -141,11 +141,35 @@ for onboard ethernet). Verified live: all 7 services active
 (klipper-mcu, klipper, moonraker, tapd, autopipette, kiosk,
 mainsail-nginx), Manta M8P MCU serial detected and connected
 (`usb-Klipper_stm32h723xx_4B0020000951313339373836-if00`), kiosk
-rendering the protocol list. NOT yet done: boot splash setup
+rendering the protocol list.
+
+2026-08-07 check-in, still on the same mobile hotspot (wifi/ethernet
+still not sorted — `ip -br link` shows no wired NIC at all, PHY still
+undetected, worth a hands-on hardware look). `/opt/cb1-autopipette` had
+drifted (2 commits behind + a dirty hand-patched `bootstrap.sh` that
+turned out byte-identical to what later landed upstream); `git pull`
+fast-forwarded clean once the dirty file was discarded, then `switch`
+(same throttled invocation as bootstrap day) brought the running config
+current — both applied and verified live, no real WARNs. `ap-status`
+surfaced and fixed two real bugs, both committed/pushed/deployed/verified
+same day: mainsail-nginx's `[alert] could not open error log file` (cosmetic
+only — `error_log stderr` already handles real logging — but the missing
+`/var/log/nginx` dir made it fire every start; `preStart` now creates it,
+commit 2d5bfe3), and kiosk's `/etc/chromium.d/dev-shm` hook failing to find
+`findmnt` (apt-shipped script we don't control, so fixed via `path = [
+pkgs.util-linux ]` on the unit, same pattern as moonraker's `iproute2`,
+commit 201acda). A third finding — a 61-second burst of klippy
+"Resetting prediction variance" clock resyncs — was investigated and
+traced to the **host-emulated `CB1` MCU** (`klipper-mcu.service`, no real
+oscillator — NOT the physical Manta board, so no motion-timing risk),
+most likely triggered by swap pressure (swap was actively in use 50+ min
+post-boot on this 969 MiB box; autopipette/moonraker/klipper had all hit
+swap since boot) — logged as a known 1 GB-RAM constraint per owner's
+call, not fixed. NOT yet done: boot splash setup
 (`splash/install-tricca-theme.sh`) and `netplan apply`/NetworkManager
 restart (bootstrap.sh's own step 6) — deliberately skipped to avoid
-disturbing the fragile hotspot connection mid-session; do these once
-`nick` is on stable wifi/ethernet.
+disturbing the fragile hotspot connection; do these once `nick` is on
+stable wifi/ethernet.
 
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
