@@ -173,7 +173,12 @@ in
         # Moonraker's machine component shells out to `ip` for network info;
         # without this the journal fills with ShellCommandError tracebacks
         # from _parse_network_interfaces (non-fatal but noisy).
-        path = [ pkgs.iproute2 ];
+        # diffutils: preStart's own `cmp` below (idempotency check for the
+        # polkit rules file) -- bare-name lookup on this unit's otherwise
+        # nix-store-only PATH, so it silently no-oped ("cmp: command not
+        # found") and the rules file was rewritten unconditionally on every
+        # switch instead of only on change. Found live on nick 2026-08-07.
+        path = [ pkgs.iproute2 pkgs.diffutils ];
         preStart = ''
           mkdir -p /var/lib/moonraker
           chown -R ${user} /var/lib/moonraker
