@@ -205,6 +205,26 @@ services green, still on the mobile hotspot (`ip -br link` shows no
 wired NIC at all, PHY still undetected — worth a hands-on hardware
 look).
 
+Later the same day, an explicit log audit (journalctl per-unit at
+warning+, dmesg, nginx error log) turned up one more real bug, fixed and
+deployed same session: klippy ran with no `--logfile` at all, so every
+start logged its own `WARNING:root:No log file specified! Severe timing
+issues may result!` and there was no persistent klippy.log anywhere on
+the machine — nothing to correlate against future timing anomalies (e.g.
+the prediction-variance resyncs above). Fixed by pointing klippy at
+`/var/lib/moonraker/logs/klippy.log` — moonraker's own log dir, so
+Mainsail's log viewer picks it up too — with klipper.service's preStart
+now creating that dir itself (it starts before moonraker in unit
+ordering, so moonraker hasn't created its data-dir tree yet) (commit
+9374da0). Verified live: `systemctl restart klipper`, klippy.log now
+exists and is being written, warning gone, all 7 services still green
+post-restart. Everything else in this audit (kswapd0 page-allocation
+warnings, a kiosk exit-code-1 restart, nginx "connection refused" on
+:7125) traced cleanly to normal `switch`/`systemctl restart moonraker`
+activity earlier in the same boot — not new bugs. The wpa_supplicant
+"RSN IE" dbus warnings and the panfrost GPU deferred-probe failure look
+like pre-existing SBC/driver quirks, not regressions; not chased further.
+
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
 The old subprocess-bridge architecture (kiosk spawning `tap` as a
