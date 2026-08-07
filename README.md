@@ -152,3 +152,30 @@ doesn't say why, that's a bug in the repo.
   the CLI activates) — a real gap, though in the 2026-07-30 incident above
   it turned out not to be the actual cause (pinning the CLI to the exact
   flake.lock rev reproduced the identical corruption).
+- **Pinning the system-manager CLI rev is not enough on its own — pass
+  `--accept-flake-config` too, or it silently compiles the CLI from source.**
+  system-manager's own `flake.nix` declares `nixConfig.extra-substituters =
+  cache.numtide.com` (prebuilt aarch64-linux binaries for the CLI, including
+  its Rust build deps like `userborn`). Without `--accept-flake-config`, Nix
+  refuses to trust that substituter (`warning: ignoring untrusted flake
+  configuration setting`) and falls back to building the Rust CLI on-device
+  instead — `rustc`/`lto1` OOM-killed `nick`'s 1GB RAM outright on first
+  encounter, and on a retry caused an actual kernel panic
+  (`hung_task: blocked tasks`, `mmc_sd_detect` stuck claiming the MMC host —
+  the sustained heavy write I/O from unpacking hundreds of store paths wedged
+  the SD card controller badly enough that `khungtaskd` gave up and panicked
+  rather than hang forever). Both `bootstrap.sh` and the `switch` alias now
+  pass `--accept-flake-config`; verified this pulls the CLI as a single fast
+  `cache.numtide.com` fetch instead of a multi-minute local Rust build.
+- **On a slow/lossy link (mobile hotspot, weak wifi), also add `--max-jobs 1
+  --cores 1 --http-connections 2`.** Nix's default `http-connections = 25`
+  opens up to 25 simultaneous downloads — fine on real wifi, but on a bad
+  link it causes many files to fail at once (`Failed sending data to the
+  peer`, `Stream error in the HTTP/2 framing layer`) and cascades into
+  `Cannot build '<drv>'. Reason: 1 dependency failed.` A stalled-looking log
+  (no new "copying path" line for minutes) is not necessarily hung — Nix
+  only prints on a download's *error* or *completion*, so a large file (e.g.
+  `rustc`, ~250MB) downloading normally over a slow link produces no output
+  for a long time. Check `ps -o stat,wchan` on the switch process before
+  assuming a hang: `S` (interruptible sleep) with no D-state processes means
+  it's waiting on network I/O, not actually stuck.

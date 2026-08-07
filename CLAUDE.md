@@ -128,6 +128,25 @@ confirmed connected to tapd's control-plane socket via `ss`, session
 respawn-into-fresh-tap confirmed by killing the tap process, SSH as
 `tricca` confirmed still a normal shell.
 
+`nick` — second machine, bootstrapped 2026-08-06. First bootstrap attempt
+OOM-killed on the unpinned `system-manager` CLI (see README field notes);
+fixed in `bootstrap.sh`/`modules/aliases.nix` (rev pin +eval
+`--accept-flake-config`, commit 5cb326b) and reproduced/fixed live. A
+later retry also hit a kernel panic (`hung_task` on the MMC controller
+under heavy build I/O) — recovered via power cycle, no lasting corruption,
+switch eventually succeeded with `--max-jobs 1 --cores 1
+--http-connections 2` over a mobile hotspot (nick's only network during
+this session; wifi/ethernet both unavailable at the time — PHY undetected
+for onboard ethernet). Verified live: all 7 services active
+(klipper-mcu, klipper, moonraker, tapd, autopipette, kiosk,
+mainsail-nginx), Manta M8P MCU serial detected and connected
+(`usb-Klipper_stm32h723xx_4B0020000951313339373836-if00`), kiosk
+rendering the protocol list. NOT yet done: boot splash setup
+(`splash/install-tricca-theme.sh`) and `netplan apply`/NetworkManager
+restart (bootstrap.sh's own step 6) — deliberately skipped to avoid
+disturbing the fragile hotspot connection mid-session; do these once
+`nick` is on stable wifi/ethernet.
+
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
 The old subprocess-bridge architecture (kiosk spawning `tap` as a
