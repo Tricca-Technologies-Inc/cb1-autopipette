@@ -214,7 +214,13 @@ in
         description = "nginx serving Mainsail on :80";
         wantedBy = [ "multi-user.target" ];
         after = [ "network.target" ];
-        preStart = "mkdir -p /var/cache/mainsail-nginx";
+        # /var/log/nginx: nginx's actual error logging goes to stderr (see
+        # error_log stderr above, captured by the journal) -- but nginx
+        # still tries to open its compile-time-default error log path
+        # (/var/log/nginx/error.log) during its pre-config bootstrap phase,
+        # before it's even read our -c config file. Missing dir -> a
+        # harmless "[alert] could not open error log file" on every start.
+        preStart = "mkdir -p /var/cache/mainsail-nginx /var/log/nginx";
         serviceConfig = {
           ExecStart = "${pkgs.nginx}/bin/nginx -c ${nginxConf}";
           Restart = "always";
