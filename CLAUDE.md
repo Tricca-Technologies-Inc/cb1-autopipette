@@ -249,3 +249,17 @@ expects verification over confidence (check the actual file/device state
 before asserting; this repo's history includes several bugs from editing
 by memory). Conversation-as-documentation matters: when a debugging session
 teaches a rule, it goes into README field notes.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub Issues on `Tricca-Technologies-Inc/cb1-autopipette`; use the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), unmapped. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
