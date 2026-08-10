@@ -179,3 +179,43 @@ doesn't say why, that's a bug in the repo.
   for a long time. Check `ps -o stat,wchan` on the switch process before
   assuming a hang: `S` (interruptible sleep) with no D-state processes means
   it's waiting on network I/O, not actually stuck.
+- **PATH gaps in Nix units aren't only apt tools — our own scripts hit them
+  too.** Nix-generated systemd units get a nix-store-only `PATH`; any
+  absolute-path-free call is at risk, not just vendor scripts. Found in
+  three places so far: kiosk-xinitrc's `xset` calls (screen blanking/DPMS/
+  screensaver) silently never ran until pathed to `/usr/bin/xset` (commit
+  0e0f97d); kiosk's `/etc/chromium.d/dev-shm` hook couldn't find `findmnt`,
+  fixed via `path = [ pkgs.util-linux ]` (commit 201acda); moonraker's
+  `preStart` polkit-rules idempotency check (`cmp`, from `diffutils`)
+  silently failed every boot, rewriting the rules file unconditionally
+  instead of only on change (commit 40a4f00). All three failed with no
+  error anywhere. Verifying a `path = [...]` fix on an already-running
+  service needs an explicit `systemctl restart <unit>` — a plain `switch`
+  reloads the unit file but doesn't restart what's already running.
+- **`plymouth-set-default-theme -R` can report success without rebuilding
+  the initramfs.** It shells out to `update-initramfs -u -k all`, and on
+  this board `-k all`'s kernel autodetection finds nothing — it exits 0
+  regardless ("Nothing to do, exiting."). `splash/install-tricca-theme.sh`
+  now rebuilds by exact kernel version and verifies with `lsinitramfs`
+  instead of trusting the tool's exit code (commit 65b3580).
+- **klippy needs an explicit `--logfile` or you get no persistent log at
+  all.** With none set it just logs `WARNING:root:No log file specified!
+  Severe timing issues may result!` on every start, with nothing to
+  correlate against future timing anomalies. Point it at
+  `/var/lib/moonraker/logs/klippy.log` — moonraker's own log dir, so
+  Mainsail's log viewer picks it up too — and have `klipper.service`'s
+  `preStart` create that dir itself (klipper starts before moonraker in
+  unit ordering, so moonraker hasn't created its data-dir tree yet)
+  (commit 9374da0).
+- **A burst of klippy "Resetting prediction variance" clock resyncs on
+  `klipper-mcu.service` is not a motion-timing issue.** That unit is the
+  host-emulated `CB1` MCU (no real oscillator) — not the physical Manta
+  board — so resyncs there carry no motion-timing risk. On a 1GB-RAM box,
+  swap pressure is the likely trigger; check swap usage before chasing it
+  as a hardware problem.
+- **mainsail-nginx's `[alert] could not open error log file` is cosmetic
+  but still worth fixing at the source.** `error_log stderr` already
+  handles real logging, but nginx still tries (and fails) to open its
+  default error log path if `/var/log/nginx` doesn't exist, firing the
+  alert on every start. `preStart` now creates the directory (commit
+  2d5bfe3).

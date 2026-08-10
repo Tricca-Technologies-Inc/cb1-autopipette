@@ -113,117 +113,25 @@ built it doubles as design history, and README.md is the operator doc.
     (see Moonraker's own `scripts/set-policykit-rules.sh` for the pattern
     modules/klipper.nix now follows).
 
-## Current machine
+## Current machines
 
-`marie` — Armbian 26.5.1 trixie, kernel 6.18.33-current-sunxi64, all
-services green (klipper-mcu, klipper, moonraker, tapd, autopipette, kiosk,
-mainsail-nginx). Manta M8P V2.0 firmware reflashed 2026-07-28 to match the
-pinned Klipper source (was severely behind — v0.11.0 firmware against a
-0.13.0-unstable host). PolicyKit fully configured (Mainsail's
-reboot/shutdown buttons work as a backup control path if the kiosk is
-down) — verified end-to-end across two real power cycles. tty2 debug
-console (autologin `tricca` → `tap`, see Architecture) shipped and
-verified live 2026-07-28: autologin confirmed passwordless, tap process
-confirmed connected to tapd's control-plane socket via `ss`, session
-respawn-into-fresh-tap confirmed by killing the tap process, SSH as
-`tricca` confirmed still a normal shell.
+Live snapshot only — overwrite these in place as status changes, don't
+append history here. Incident write-ups and hard-won lessons belong in
+README's `## Field notes (hard-won)` instead.
 
-`nick` — second machine, bootstrapped 2026-08-06. First bootstrap attempt
-OOM-killed on the unpinned `system-manager` CLI (see README field notes);
-fixed in `bootstrap.sh`/`modules/aliases.nix` (rev pin +eval
-`--accept-flake-config`, commit 5cb326b) and reproduced/fixed live. A
-later retry also hit a kernel panic (`hung_task` on the MMC controller
-under heavy build I/O) — recovered via power cycle, no lasting corruption,
-switch eventually succeeded with `--max-jobs 1 --cores 1
---http-connections 2` over a mobile hotspot (nick's only network during
-this session; wifi/ethernet both unavailable at the time — PHY undetected
-for onboard ethernet). Verified live: all 7 services active
-(klipper-mcu, klipper, moonraker, tapd, autopipette, kiosk,
-mainsail-nginx), Manta M8P MCU serial detected and connected
-(`usb-Klipper_stm32h723xx_4B0020000951313339373836-if00`), kiosk
-rendering the protocol list.
-
-2026-08-07 check-in, still on the same mobile hotspot (wifi/ethernet
-still not sorted — `ip -br link` shows no wired NIC at all, PHY still
-undetected, worth a hands-on hardware look). `/opt/cb1-autopipette` had
-drifted (2 commits behind + a dirty hand-patched `bootstrap.sh` that
-turned out byte-identical to what later landed upstream); `git pull`
-fast-forwarded clean once the dirty file was discarded, then `switch`
-(same throttled invocation as bootstrap day) brought the running config
-current — both applied and verified live, no real WARNs. `ap-status`
-surfaced and fixed two real bugs, both committed/pushed/deployed/verified
-same day: mainsail-nginx's `[alert] could not open error log file` (cosmetic
-only — `error_log stderr` already handles real logging — but the missing
-`/var/log/nginx` dir made it fire every start; `preStart` now creates it,
-commit 2d5bfe3), and kiosk's `/etc/chromium.d/dev-shm` hook failing to find
-`findmnt` (apt-shipped script we don't control, so fixed via `path = [
-pkgs.util-linux ]` on the unit, same pattern as moonraker's `iproute2`,
-commit 201acda). A third finding — a 61-second burst of klippy
-"Resetting prediction variance" clock resyncs — was investigated and
-traced to the **host-emulated `CB1` MCU** (`klipper-mcu.service`, no real
-oscillator — NOT the physical Manta board, so no motion-timing risk),
-most likely triggered by swap pressure (swap was actively in use 50+ min
-post-boot on this 969 MiB box; autopipette/moonraker/klipper had all hit
-swap since boot) — logged as a known 1 GB-RAM constraint per owner's
-call, not fixed.
-
-Later the same day, splash setup and the netplan/NetworkManager step
-(bootstrap.sh's step 6 + tail) were done on nick, still over the hotspot
-(owner explicitly asked despite the risk). Netplan/NM restart: launched
-detached (`nohup ... & disown`) so it would survive the SSH channel
-dropping mid-restart — came back clean, wifi auto-reconnected. Splash:
-found and fixed a real bug doing this — `plymouth-set-default-theme -R`
-claimed success but never actually rebuilt the initramfs, because it
-shells out to `update-initramfs -u -k all`, and on this board `-k all`'s
-kernel autodetection finds nothing (exits 0 regardless, "Nothing to do,
-exiting."). Fixed nick's live `/boot` manually, then fixed
-`splash/install-tricca-theme.sh` itself to rebuild by exact kernel
-version and verify with `lsinitramfs` instead of trusting the tool's
-exit code (commit 65b3580) — `marie` has the same splash setup and
-hasn't been re-checked for this bug. Rebooted nick to confirm: clean
-boot, no crash-loop, every system-level splash indicator green (theme
-active, plymouth-quit masked, kernel cmdline has `splash`) — actual
-on-screen appearance not verified (needs eyes-on/photo, not done).
-
-The reboot's journal surfaced two more instances of the same nix-store-
-only-PATH bug class (rule #1), both fixed/deployed/verified same day:
-kiosk-xinitrc's three `xset` calls (screen blanking/DPMS/screensaver)
-were silently never running — absolute-pathed `/usr/bin/xset` (commit
-0e0f97d), consistent with `kioskPre`'s existing `/usr/bin/plymouth`
-call since this is our own script. And moonraker's `preStart` polkit-
-rules idempotency check (`cmp`) was silently failing every boot,
-meaning the rules file was rewritten unconditionally instead of only on
-change — `cmp` is from `diffutils`, not covered by the unit's existing
-`pkgs.iproute2` (added for `ip`); added `pkgs.diffutils` too (commit
-40a4f00). Verifying this one needed an explicit `systemctl restart
-moonraker` (a plain switch reloads the unit file but doesn't restart an
-already-running process), then confirmed directly: `cmp` resolves and
-exits 0 under moonraker's exact unit PATH.
-
-nick is fully current as of this session: repo at commit 40a4f00, all 7
-services green, still on the mobile hotspot (`ip -br link` shows no
-wired NIC at all, PHY still undetected — worth a hands-on hardware
-look).
-
-Later the same day, an explicit log audit (journalctl per-unit at
-warning+, dmesg, nginx error log) turned up one more real bug, fixed and
-deployed same session: klippy ran with no `--logfile` at all, so every
-start logged its own `WARNING:root:No log file specified! Severe timing
-issues may result!` and there was no persistent klippy.log anywhere on
-the machine — nothing to correlate against future timing anomalies (e.g.
-the prediction-variance resyncs above). Fixed by pointing klippy at
-`/var/lib/moonraker/logs/klippy.log` — moonraker's own log dir, so
-Mainsail's log viewer picks it up too — with klipper.service's preStart
-now creating that dir itself (it starts before moonraker in unit
-ordering, so moonraker hasn't created its data-dir tree yet) (commit
-9374da0). Verified live: `systemctl restart klipper`, klippy.log now
-exists and is being written, warning gone, all 7 services still green
-post-restart. Everything else in this audit (kswapd0 page-allocation
-warnings, a kiosk exit-code-1 restart, nginx "connection refused" on
-:7125) traced cleanly to normal `switch`/`systemctl restart moonraker`
-activity earlier in the same boot — not new bugs. The wpa_supplicant
-"RSN IE" dbus warnings and the panfrost GPU deferred-probe failure look
-like pre-existing SBC/driver quirks, not regressions; not chased further.
+- `marie` — Armbian 26.5.1 trixie, kernel 6.18.33-current-sunxi64. Last
+  confirmed live 2026-07-28: all 7 services green, Manta firmware
+  reflashed to match the pinned Klipper source, PolicyKit + tty2 debug
+  console verified end-to-end. Not re-switched since — missing nick's
+  PATH-gap/splash/klippy-logfile fixes and this session's agent-skills+ADR
+  docs work; machine state not reverified this session.
+- `nick` — bootstrapped 2026-08-06. Last confirmed live 2026-08-10: all 7
+  services green, repo at commit `40a4f00`. `main` has since moved to
+  `c09b92d` (agent-skills config + ADR split) — not yet pulled/switched on
+  nick. Still on a mobile hotspot: no wired NIC detected, PHY undetected
+  on onboard ethernet, worth a hands-on hardware look. Splash rebuild
+  verified at the system level (theme active, plymouth-quit masked,
+  kernel cmdline has `splash`); on-screen appearance not eyes-on verified.
 
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
