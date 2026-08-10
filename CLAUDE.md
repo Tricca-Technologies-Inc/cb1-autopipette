@@ -14,49 +14,49 @@ built it doubles as design history, and README.md is the operator doc.
 | `Tricca-Technologies-Inc/Tricca_AutoPipette` | Python app: `tricca_autopipette` (cmd2 shell, `tap` script) + `autopipette_kiosk` (FastAPI, port 8000) | flake input `tricca-src` |
 | `Tricca-Technologies-Inc/Tricca_Autopipette_Configs` | printer.cfg + mainsail.cfg + tricca-autopipette.cfg macros | flake input `printer-cfgs` |
 
-## Architecture (do not re-litigate)
+## Architecture (do not re-litigate — rationale is in `docs/adr/`)
 
 - Armbian base + apt for: kernel, NetworkManager, Xorg, Chromium, plymouth.
   Kernel updates are TAKEN (owner's security requirement), treated as
-  maintenance events with a verification reboot.
-- Everything else is Nix via numtide/system-manager (`systemConfigs.default`;
-  per-machine hook: `systemConfigs."<hostname>"`). Services: klipper-mcu
-  (host MCU, same pinned src as klippy), klipper, moonraker, mainsail-nginx
-  (:80), tapd (control daemon, owns the Moonraker connection), autopipette
-  (:8000, thin kiosk client of tapd's control-plane websocket), kiosk, plus
-  /etc files and shell helpers.
-- tapd (from tricca-src) is a long-running control daemon holding the single
-  persistent Moonraker connection; `tap` (interactive shell) and the kiosk
-  are both thin clients of its control-plane websocket
-  (ws://127.0.0.1:8765/control) instead of talking to Moonraker or spawning
-  subprocesses themselves. Needs `AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette`
-  (modules/tapd.nix) since tricca_autopipette's path defaults assume a
-  src-layout checkout, which breaks for any installed package.
+  maintenance events with a verification reboot. Everything else is Nix
+  via numtide/system-manager (`systemConfigs.default`; per-machine hook:
+  `systemConfigs."<hostname>"`). See
+  [ADR-0001](docs/adr/0001-apt-vs-nix-boundary.md).
+- Services: klipper-mcu (host MCU, same pinned src as klippy), klipper,
+  moonraker, mainsail-nginx (:80), tapd (control daemon, owns the
+  Moonraker connection), autopipette (:8000, thin kiosk client of tapd's
+  control-plane websocket), kiosk, plus /etc files and shell helpers.
+- tapd (from tricca-src) is a long-running control daemon holding the
+  single persistent Moonraker connection; `tap` (interactive shell) and
+  the kiosk are both thin clients of its control-plane websocket
+  (ws://127.0.0.1:8765/control) instead of talking to Moonraker or
+  spawning subprocesses themselves. Needs
+  `AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette` (modules/tapd.nix) since
+  tricca_autopipette's path defaults assume a src-layout checkout, which
+  breaks for any installed package. See
+  [ADR-0002](docs/adr/0002-tapd-control-plane-daemon.md).
 - tty2 is a debug console (modules/tricca-console.nix): Ctrl+Alt+F2
-  autologs in as `tricca` (the existing admin/SSH account, no password) and
-  execs `tap` instead of a normal shell — a fast path back to control if
-  the kiosk (tty1) is misbehaving. Deliberately NOT done by changing
-  tricca's `/etc/passwd` shell (that would hijack SSH logins on the same
-  account too); instead a profile.d script execs tap only when the tty is
-  a physical console (tty2+), never a pts/SSH session. tty1 stays
-  kiosk-only; if the kiosk dies and getty@tty1 comes back, that login is
-  left as a normal shell (recovery path).
+  autologs in as `tricca` (the existing admin/SSH account, no password)
+  and execs `tap` instead of a normal shell — a fast path back to control
+  if the kiosk (tty1) is misbehaving. See
+  [ADR-0003](docs/adr/0003-tty2-debug-console-without-passwd-change.md).
 - Manta M8P V2.0 board firmware (STM32H723) drifts from the host's pinned
-  Klipper version over time ("MCU has deprecated code" warnings) since it's
-  flashed once and never auto-updated. `mantaFirmware` (flake.nix) builds a
-  correct binary from the same pinned source; `flash-manta` (shell helper)
-  flashes it via the board's STM32 ROM DFU bootloader (masked in silicon —
-  can't be bricked by a bad write).
+  Klipper version over time ("MCU has deprecated code" warnings) since
+  it's flashed once and never auto-updated. `mantaFirmware` (flake.nix)
+  builds a correct binary from the same pinned source; `flash-manta`
+  (shell helper) flashes it via the board's STM32 ROM DFU bootloader. See
+  [ADR-0004](docs/adr/0004-manta-firmware-rebuilt-from-pinned-source.md).
 - printer.cfg seeds ONCE from printer-cfgs into /var/lib/moonraker/config/,
-  then is machine-owned (SAVE_CONFIG + Mainsail editor rewrite it).
+  then is machine-owned (SAVE_CONFIG + Mainsail editor rewrite it). See
+  [ADR-0005](docs/adr/0005-printer-cfg-seed-once-then-machine-owned.md).
 - Wifi: NetworkManager persistent profile, created manually per machine.
   Credentials never enter the repo. netplan is nix-owned (replaceExisting).
+  See [ADR-0006](docs/adr/0006-wifi-credentials-never-in-repo.md).
 - Boot: black → tricca plymouth theme (logo, throbber below) → logo holds
   (plymouth-quit units neutralized; kiosk pre-script quits with
-  --retain-splash) → sub-second white blink → kiosk. The white blink is
-  Chromium X11 window-clear; ALL mitigations were tested and exhausted
-  (flags, dark first-paint, Wayland/cage). Owner has closed this. Do not
-  reopen splash/flash work unless explicitly asked.
+  --retain-splash) → sub-second white blink → kiosk. Do not reopen
+  splash/flash work unless explicitly asked. See
+  [ADR-0007](docs/adr/0007-boot-splash-white-blink-closed.md).
 
 ## Commands
 
