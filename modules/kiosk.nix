@@ -96,7 +96,7 @@ in
       # Chromium's own apt-shipped /etc/chromium.d/dev-shm hook shells out to
       # `findmnt` by bare name (a script we don't control, unlike kioskPre
       # above, so an absolute path isn't an option here). Same failure class
-      # as moonraker needing iproute2 on its path (modules/klipper.nix): the
+      # as moonraker needing iproute2 on its path (modules/moonraker.nix): the
       # unit's PATH is otherwise nix-store-only, so the lookup fails silently
       # and the hook's /dev/shm mount-flags check never runs.
       path = [ pkgs.util-linux ];
