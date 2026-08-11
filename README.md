@@ -25,7 +25,9 @@ flake.nix                       inputs + systemConfigs.default
 bootstrap.sh                    ALL imperative steps; run once per machine (interactive)
 modules/base.nix                platform + shared packages
 modules/networking.nix          udev rule + netplan replacement (replaceExisting)
-modules/klipper.nix             klipper-mcu, klipper, moonraker, mainsail(nginx)
+modules/klipper.nix             klipper-mcu, klipper
+modules/moonraker.nix           moonraker API server + PolicyKit rules
+modules/mainsail.nix            mainsail static files via nginx on :80
 modules/autopipette.nix         FastAPI backend on :8000
 modules/kiosk.nix               chromium kiosk on tty1; splash handoff
 modules/aliases.nix             shell helpers in /etc/profile.d (fleet-wide)

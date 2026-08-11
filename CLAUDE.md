@@ -111,7 +111,7 @@ built it doubles as design history, and README.md is the operator doc.
     (granted to one unit, not the user account) is invisible to
     `isInGroup()` — use the `/proc/<pid>/status`-grep technique instead
     (see Moonraker's own `scripts/set-policykit-rules.sh` for the pattern
-    modules/klipper.nix now follows).
+    modules/moonraker.nix now follows).
 
 ## Current machines
 
@@ -141,14 +141,7 @@ owner's own TODO from the last session, now done and pinned. Verified:
 kiosk correctly lists `/protocols` and reports `/status` through tapd's
 control-plane websocket, homing succeeded, Mainsail jog commands worked
 after the MCU serial fix. Not yet verified: a complete, successful
-liquid-handling run of a real `.pipette` protocol through the kiosk. Two
-things surfaced during initial live testing that are still open:
-- A hardware homing issue (Z-axis endstop) the owner called "a known issue"
-  and is handling themselves — not a software/deployment bug.
-- At least one `.pipette` protocol file has an argument-order mistake
-  (flags before positional args cause `--prewet N` to swallow the transfer
-  volume) — a protocol-authoring bug, not a tricca_autopipette bug. Worth
-  checking other `.pipette` files for the same mistake before a real run.
+liquid-handling run of a real `.pipette` protocol through the kiosk.
 
 ## Style for this project
 

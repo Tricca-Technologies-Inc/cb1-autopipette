@@ -63,6 +63,8 @@
           ./modules/base.nix
           ./modules/networking.nix
           ./modules/klipper.nix
+          ./modules/moonraker.nix
+          ./modules/mainsail.nix
           ./modules/tapd.nix
           ./modules/autopipette.nix
           ./modules/kiosk.nix
