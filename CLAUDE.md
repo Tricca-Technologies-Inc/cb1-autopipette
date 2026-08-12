@@ -57,6 +57,10 @@ built it doubles as design history, and README.md is the operator doc.
   --retain-splash) → sub-second white blink → kiosk. Do not reopen
   splash/flash work unless explicitly asked. See
   [ADR-0007](docs/adr/0007-boot-splash-white-blink-closed.md).
+- CI (`.github/workflows/ci.yml`) builds `systemConfigs.default` and
+  `packages.aarch64-linux.*` for real via QEMU emulation on a GitHub-hosted
+  runner, required on `main`. No self-hosted runner on marie. See
+  [ADR-0008](docs/adr/0008-ci-full-build-not-eval-only-no-self-hosted-runner.md).
 
 ## Commands
 

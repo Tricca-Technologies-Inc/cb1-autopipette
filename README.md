@@ -23,6 +23,7 @@ machine spec; commit it always.
 ```
 flake.nix                       inputs + systemConfigs.default
 bootstrap.sh                    ALL imperative steps; run once per machine (interactive)
+.github/workflows/ci.yml        builds systemConfigs.default + packages for real, required on main
 modules/base.nix                platform + shared packages
 modules/networking.nix          udev rule + netplan replacement (replaceExisting)
 modules/klipper.nix             klipper-mcu, klipper
