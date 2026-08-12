@@ -1,0 +1,48 @@
+name: CI
+
+# Full real builds, not eval-only -- see ADR-0008. `nix flake check` alone
+# never touches `systemConfigs` (it's outside Nix's recognized flake schema),
+# so that gets its own explicit build step below.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  flake-check:
+    name: flake-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Everything in this flake is aarch64-linux (the CB1 target); this
+      # runner is x86_64. Registers binfmt_misc handlers so the Nix sandbox
+      # can actually execute aarch64 builders under emulation -- most of the
+      # closure still substitutes pre-built from cache.nixos.org, only a
+      # handful of leaf derivations (system-manager's activation script,
+      # tricca-autopipette, mantaFirmware) need to really run.
+      - name: Set up QEMU (aarch64 emulation)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            extra-platforms = aarch64-linux
+
+      # Validates + builds packages.aarch64-linux.* (tricca-autopipette,
+      # mantaFirmware) and the flake's general schema.
+      - name: nix flake check
+        run: nix flake check --all-systems
+
+      # systemConfigs is a system-manager output, not part of Nix's flake
+      # schema -- `nix flake check` silently skips it (confirmed live
+      # 2026-08-11), so it needs this explicit build to actually verify the
+      # machine spec.
+      - name: Build systemConfigs.default
+        run: nix build .#systemConfigs.default --print-out-paths
