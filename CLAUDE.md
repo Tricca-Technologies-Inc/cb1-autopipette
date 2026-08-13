@@ -77,8 +77,10 @@ built it doubles as design history, and README.md is the operator doc.
   `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
   `flash-manta` (reflash the Manta board firmware, see Architecture)
 - Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs|system-manager]`,
-  commit flake.lock, push; machines `git pull && switch`. Never edit the
-  lock on a machine.
+  commit flake.lock, PR (main's branch protection requires the `flake-check`
+  CI build to pass before any update lands, direct push included — see
+  ADR-0008); machines `git pull && switch` once merged. Never edit the lock
+  on a machine.
 - New machine: flash Armbian minimal (kernel ≥6.x), ethernet,
   `sudo bash bootstrap.sh` (interactive: hostname), then wifi via nmcli,
   MCU serial via Mainsail, reboot.
