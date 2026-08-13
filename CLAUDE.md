@@ -35,10 +35,12 @@ built it doubles as design history, and README.md is the operator doc.
   tricca_autopipette's path defaults assume a src-layout checkout, which
   breaks for any installed package. See
   [ADR-0002](docs/adr/0002-tapd-control-plane-daemon.md).
-- tty2 is a debug console (modules/tricca-console.nix): Ctrl+Alt+F2
-  autologs in as `tricca` (the existing admin/SSH account, no password)
-  and execs `tap` instead of a normal shell — a fast path back to control
-  if the kiosk (tty1) is misbehaving. See
+- tty2-tty6 are debug consoles (modules/tricca-console.nix): all autolog in
+  as `tricca` (the existing admin/SSH account, no password). Ctrl+Alt+F2
+  (tty2) execs `tap` instead of a normal shell — a fast path back to
+  control if the kiosk (tty1) is misbehaving. Ctrl+Alt+F3..F6 (tty3-tty6)
+  land in a normal shell instead, so `tap` can run on tty2 while
+  journalctl/htop/etc. run alongside it on another VT. See
   [ADR-0003](docs/adr/0003-tty2-debug-console-without-passwd-change.md).
 - Manta M8P V2.0 board firmware (STM32H723) drifts from the host's pinned
   Klipper version over time ("MCU has deprecated code" warnings) since
