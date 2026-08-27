@@ -63,11 +63,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1787135253,
-        "narHash": "sha256-RD2kNWCG+Bjo6h+JVjWVNntZs2GtRoeY2xHjts/FNkA=",
+        "lastModified": 1787736819,
+        "narHash": "sha256-cV5xEJJK3BvhU8rEd4mC9UsmDi5qscv/kzGPhBRC5WA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "ffb3c9b700e759be2ef13237c9d8f953b32a1e46",
+        "rev": "9fbb54b33e91ee4ca368e35a78e0613c720600b3",
         "type": "github"
       },
       "original": {
@@ -169,11 +169,11 @@
     "tricca-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1787248697,
-        "narHash": "sha256-D1f5wYuHuyTX9kGgmHG/vCs8oIN0fk8HDwFW0Eh120w=",
+        "lastModified": 1787352082,
+        "narHash": "sha256-Gvm5Gq98EBJksABPzLKz4WB/pYnGr9TdlprcvHFlhzY=",
         "owner": "Tricca-Technologies-Inc",
         "repo": "Tricca_AutoPipette",
-        "rev": "788bb287c8430b91f1c94158617f5b68ccc5f1bf",
+        "rev": "7a3a2882637b9320d50bf6af7f2a8d594411a3f8",
         "type": "github"
       },
       "original": {
