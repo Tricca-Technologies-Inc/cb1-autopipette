@@ -63,6 +63,13 @@ built it doubles as design history, and README.md is the operator doc.
   `packages.aarch64-linux.*` for real via QEMU emulation on a GitHub-hosted
   runner, required on `main`. No self-hosted runner on marie. See
   [ADR-0008](docs/adr/0008-ci-full-build-not-eval-only-no-self-hosted-runner.md).
+- `switch` builds `systemConfigs.default` on the machine itself, requiring
+  that machine's own internet — fine on a good link, a real problem on
+  wifi/hotspot-only lab machines. `prime.sh` (workstation-side) builds the
+  closure elsewhere and pushes it over local-network SSH instead, so the
+  machine's own internet quality stops mattering; `modules/nix-settings.nix`
+  grants the trust that push needs. See
+  [ADR-0009](docs/adr/0009-prime-workstation-build-push.md).
 
 ## Commands
 
@@ -76,6 +83,11 @@ built it doubles as design history, and README.md is the operator doc.
 - Helpers (modules/aliases.nix → /etc/profile.d): `switch`,
   `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
   `flash-manta` (reflash the Manta board firmware, see Architecture)
+- Machine on wifi/hotspot too slow/unreliable for `switch` to build
+  on-device: `./prime.sh <host> [ssh-user]` from a WORKSTATION checkout
+  first — builds `systemConfigs.default` there, pushes the closure over
+  local-network SSH, so `switch` on the machine finds it already built.
+  See ADR-0009. Intended pilot: `nick`; not yet run on either machine.
 - Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs|system-manager]`,
   commit flake.lock, PR (main's branch protection requires the `flake-check`
   CI build to pass before any update lands, direct push included — see

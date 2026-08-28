@@ -23,6 +23,7 @@ machine spec; commit it always.
 ```
 flake.nix                       inputs + systemConfigs.default
 bootstrap.sh                    ALL imperative steps; run once per machine (interactive)
+prime.sh                        WORKSTATION-side: build + push a closure to a machine, see below
 .github/workflows/ci.yml        builds systemConfigs.default + packages for real, required on main
 modules/base.nix                platform + shared packages
 modules/networking.nix          udev rule + netplan replacement (replaceExisting)
@@ -32,6 +33,7 @@ modules/mainsail.nix            mainsail static files via nginx on :80
 modules/autopipette.nix         FastAPI backend on :8000
 modules/kiosk.nix               chromium kiosk on tty1; splash handoff
 modules/aliases.nix             shell helpers in /etc/profile.d (fleet-wide)
+modules/nix-settings.nix        trusted-users grant for prime.sh's push (see below)
 pkgs/tricca-autopipette.nix     python package from tricca-src
 config/moonraker.conf           nix-managed, read-only
 config/klipper-host-mcu.config  Kconfig for the on-board host MCU build
@@ -79,16 +81,48 @@ on every machine (log out/in after the first switch to pick them up):
   re-run), writes via `dfu-util` at the 128KiB-bootloader offset, board
   reboots back into the new firmware automatically.
 
-Updating pinned software: `nix flake update` (or `nix flake update tricca-src`
-for just the app) on a desktop, commit `flake.lock`, push, `switch` on each
-machine. Moonraker's update_manager is intentionally absent.
+## Updating machines after an app change
 
-Building the app off-board: `nix build .#tricca-autopipette --system
-aarch64-linux` needs qemu binfmt or an aarch64 remote builder on x86-64;
-`nix copy --to ssh://<host> ./result` needs your ssh user in the CB1's
-`trusted-users` and both ends on the same committed `flake.lock`. The CB1
-builds the pure-Python package itself in seconds during `switch`, so this
-path is only for heavyweight cache misses.
+The app itself (`tricca_autopipette` / `autopipette_kiosk`) lives in the
+separate `Tricca_AutoPipette` repo, pinned here as the `tricca-src` flake
+input. A change there doesn't reach any machine until its pin is bumped and
+that's switched in:
+
+1. **On a workstation**, in this repo: `nix flake update tricca-src`
+   (or plain `nix flake update` to pick up everything). Commit
+   `flake.lock`, push, PR, merge to `main` — branch protection requires the
+   CI build (`.github/workflows/ci.yml`) to pass first.
+2. **On the machine**: `git pull` in `/opt/cb1-autopipette` (changes nothing
+   by itself — see CONTEXT.md's **Switch** entry), then either:
+   - **Good internet**: just `switch`. It builds `systemConfigs.default` and
+     fetches whatever it needs on-device.
+   - **Wifi/hotspot too slow or unreliable** (`marie`, `nick` — no ethernet
+     option on either): **prime first**. From the same workstation checkout,
+     same network as the machine (wifi or hotspot both work, doesn't need to
+     be ethernet — just the same local network, not routed over the
+     internet):
+     ```
+     ./prime.sh <machine-hostname-or-ip>
+     ```
+     Builds `systemConfigs.default` locally and pushes the closure straight
+     into the machine's Nix store over SSH. Then `switch` on the machine as
+     normal — it finds the build already done and just activates it. See
+     [ADR-0009](docs/adr/0009-prime-workstation-build-push.md) and
+     CONTEXT.md's **Prime** entry.
+
+     One-time workstation setup `prime.sh` needs and checks for itself:
+     ```
+     sudo apt-get install -y qemu-user-static binfmt-support
+     echo 'extra-platforms = aarch64-linux' | sudo tee -a /etc/nix/nix.custom.conf
+     sudo systemctl restart nix-daemon
+     ```
+     The machine side of the trust needed for the push (`nix.settings.trusted-users`
+     for the `tricca` account) ships declaratively via
+     `modules/nix-settings.nix` — nothing to set up by hand there, it's live
+     after that module's first `switch`.
+
+Moonraker's update_manager is intentionally absent — this pull+prime+switch
+flow is the only update path, deliberately.
 
 ## apt vs Nix, and kernel updates
 
