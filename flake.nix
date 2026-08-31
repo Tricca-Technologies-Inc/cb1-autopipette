@@ -70,6 +70,7 @@
           ./modules/kiosk.nix
           ./modules/tricca-console.nix
           ./modules/aliases.nix
+          ./modules/nix-settings.nix
         ];
         specialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware system-managerRev; };
       };
