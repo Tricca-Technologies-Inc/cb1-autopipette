@@ -145,13 +145,22 @@ README's `## Field notes (hard-won)` instead.
   console verified end-to-end. Not re-switched since — missing nick's
   PATH-gap/splash/klippy-logfile fixes and this session's agent-skills+ADR
   docs work; machine state not reverified this session.
-- `nick` — bootstrapped 2026-08-06. Last confirmed live 2026-08-10: all 7
-  services green, repo at commit `40a4f00`. `main` has since moved to
-  `c09b92d` (agent-skills config + ADR split) — not yet pulled/switched on
-  nick. Still on a mobile hotspot: no wired NIC detected, PHY undetected
-  on onboard ethernet, worth a hands-on hardware look. Splash rebuild
-  verified at the system level (theme active, plymouth-quit masked,
-  kernel cmdline has `splash`); on-screen appearance not eyes-on verified.
+- `nick` — bootstrapped 2026-08-06. All 7 services green and running, but
+  the running config is **stuck on system-manager generation 8 (built
+  2026-08-13)** — repo is current at `main` (`34f36ed`), but 7 switch
+  attempts across 2026-08-31/09-01 all failed to activate a new
+  generation. First 5 hard-froze the machine (whole-system memory/SD-card
+  I/O collapse — full writeup in session notes, not yet in README/ADR);
+  a live (uncommitted) `sysctl` dirty-page/ext4-commit tuning fixed the
+  freezing, but the next 2 attempts then hit nick's flaky mobile-hotspot
+  link instead (cache download failures, clean non-fatal errors). Still
+  on a mobile hotspot: no wired NIC detected, PHY undetected on onboard
+  ethernet, worth a hands-on hardware look — may also explain the
+  download flakiness. Splash rebuild verified at the system level (theme
+  active, plymouth-quit masked, kernel cmdline has `splash`); on-screen
+  appearance not eyes-on verified. Next switch attempt should check link
+  quality first and, if it succeeds, commit the dirty-page tuning
+  properly (currently lost on reboot).
 
 ## State: tapd control daemon shipped and verified; live hardware runs in progress
 
