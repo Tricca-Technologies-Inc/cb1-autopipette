@@ -1,7 +1,7 @@
 # Shell helpers on every machine, managed by Nix (not bootstrap) so the
 # whole fleet gets updates via `switch`. Sourced by login shells from
 # /etc/profile.d/. Functions rather than aliases so they can take arguments.
-{ pkgs, mantaFirmware, system-managerRev, ... }:
+{ pkgs, mantaFirmware, system-managerRev, ioTuningApply, switchHealthSampler, ... }:
 let
   # flashtool.py (vendored in Klipper's own source) can trigger the board's
   # built-in "jump to bootloader" request over the currently-running Klipper
@@ -26,9 +26,55 @@ in
       # aarch64-linux binaries for the CLI). Without this flag Nix ignores
       # that substituter and compiles the Rust CLI from source on-device --
       # rustc/lto1 OOM-kill a 1 GB CB1 outright (bit `nick`'s bootstrap
-      # 2026-08-05, see bootstrap.sh).
+      # 2026-08-05, see bootstrap.sh), and once caused a kernel panic. A
+      # 2026-09-03 attempt that hand-ran switch without this flag hit both
+      # the from-source build AND the panic again -- see
+      # docs/incidents/nick-generation-8-upgrade.md, attempt 9.
+      # Stop kiosk+autopipette first: chromium (kiosk) is a confirmed
+      # multi-hundred-MB consumer, and both were among the D-state processes
+      # during nick's I/O-collapse freezes -- freeing that RAM measurably
+      # delayed (though didn't alone prevent) the collapse. Restarted
+      # unconditionally after switch returns, success or failure, so a
+      # machine never gets stuck kiosk-less; $rc preserves switch's own exit
+      # code so callers still see a real failure. --max-jobs 1 --cores 1
+      # --http-connections 2 serialize builds/downloads instead of running
+      # them concurrently -- see README's Troubleshooting section and
+      # docs/incidents/nick-generation-8-upgrade.md for why: concurrent
+      # copy-in I/O is the trigger for the SD-card write collapse, not just
+      # raw volume. klipper/moonraker/tapd stay up -- the gantry doesn't
+      # need interrupting for a config update, and they weren't implicated.
+      # Also, defensively: reapply the dirty-page/ext4-commit tuning live
+      # every time (idempotent, near-instant) rather than trusting
+      # io-tuning.service alone -- that service only takes effect once a
+      # machine is already on a generation that contains it, which isn't
+      # true the first time this rolls out to a stuck machine (the exact
+      # gap that let attempt 9 above freeze). And run a background health
+      # sampler (free/loadavg/dirty-pages/D-state processes every 5s,
+      # synced to disk) for the duration, logged alongside switch's own
+      # output under /var/log/tricca-switch/ -- so a freeze leaves a
+      # postmortem trail instead of nothing.
       switch() {
-        sudo -i nix run --accept-flake-config "github:numtide/system-manager/${system-managerRev}" -- switch --flake /opt/cb1-autopipette
+        local logdir=/var/log/tricca-switch
+        sudo mkdir -p "$logdir"
+        sudo find "$logdir" -maxdepth 1 -name '*.log' -mtime +30 -delete
+        sudo find "$logdir" -maxdepth 1 -name '*.stop' -mmin +60 -delete
+        local ts; ts=$(date +%Y%m%dT%H%M%S)
+        local logfile="$logdir/switch-$ts.log"
+        local stopfile="$logdir/switch-$ts.stop"
+        sudo systemctl stop kiosk autopipette
+        sudo ${ioTuningApply}
+        sudo ${switchHealthSampler} "$logfile" "$stopfile" &
+        sudo -i nix run --accept-flake-config \
+          --max-jobs 1 --cores 1 --http-connections 2 \
+          "github:numtide/system-manager/${system-managerRev}" -- switch --flake /opt/cb1-autopipette \
+          2>&1 | sudo tee -a "$logfile"
+        local rc=''${PIPESTATUS[0]}
+        sudo touch "$stopfile"
+        sleep 6
+        sudo rm -f "$stopfile"
+        sudo systemctl start autopipette kiosk
+        echo "Log: $logfile"
+        return $rc
       }
 
       # Preview the boot splash for N seconds (default 5), then restore the kiosk

@@ -53,6 +53,45 @@
       # (used to build the config it's activating). Pin the CLI to the exact
       # same rev so `switch` always matches what flake.lock says.
       system-managerRev = system-manager.rev;
+      # Dirty-page/ext4-commit I/O tuning, shared between the boot-time
+      # io-tuning.service (modules/io-tuning.nix) and `switch`'s own
+      # defensive reapplication (modules/aliases.nix) -- one script so the
+      # two can never drift out of sync. See modules/io-tuning.nix and
+      # docs/incidents/nick-generation-8-upgrade.md for the full rationale
+      # and history.
+      ioTuningApply = pkgs.writeShellScript "io-tuning-apply" ''
+        set -eu
+        /usr/sbin/sysctl -w vm.dirty_background_bytes=4194304   # 4 MiB
+        /usr/sbin/sysctl -w vm.dirty_bytes=16777216              # 16 MiB
+        /usr/sbin/sysctl -w vm.dirty_writeback_centisecs=100     # 1s (was 5s)
+        /usr/sbin/sysctl -w vm.dirty_expire_centisecs=500        # 5s (was 30s)
+        /usr/bin/mount -o remount,commit=5 /
+      '';
+      # Background health sampler for `switch` -- appends free-memory/
+      # loadavg/dirty-page/D-state-process snapshots to a log every 5s,
+      # `sync`ing each write so the tail survives a hard freeze (the
+      # documented failure mode: every writer on the box, including core
+      # daemons, piles into D-state with no warning beforehand). $1 = log
+      # file, $2 = stop-file marker -- checked each loop rather than relying
+      # on signal delivery through `sudo`, which doesn't forward reliably.
+      # See docs/incidents/nick-generation-8-upgrade.md.
+      switchHealthSampler = pkgs.writeShellScript "switch-health-sampler" ''
+        set -u
+        logfile="$1"
+        stopfile="$2"
+        while [ ! -e "$stopfile" ]; do
+          {
+            echo "=== $(/usr/bin/date -Iseconds) ==="
+            /usr/bin/grep -E 'MemFree|MemAvailable|SwapFree|^Dirty|Writeback' /proc/meminfo
+            echo "loadavg: $(</proc/loadavg)"
+            echo "-- D-state processes --"
+            /usr/bin/ps -eo pid,stat,comm | /usr/bin/awk '$2 ~ /^D/'
+          } >> "$logfile"
+          /usr/bin/sync
+          /usr/bin/sleep 5
+        done
+        echo "=== sampler stopped at $(/usr/bin/date -Iseconds) ===" >> "$logfile"
+      '';
     in
     {
       # Applied with the `switch` shell alias (modules/aliases.nix), which
@@ -71,8 +110,9 @@
           ./modules/tricca-console.nix
           ./modules/aliases.nix
           ./modules/nix-settings.nix
+          ./modules/io-tuning.nix
         ];
-        specialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware system-managerRev; };
+        specialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware system-managerRev ioTuningApply switchHealthSampler; };
       };
 
       packages.${system} = {
