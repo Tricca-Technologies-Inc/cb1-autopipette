@@ -66,6 +66,38 @@
         /usr/sbin/sysctl -w vm.dirty_writeback_centisecs=100     # 1s (was 5s)
         /usr/sbin/sysctl -w vm.dirty_expire_centisecs=500        # 5s (was 30s)
         /usr/bin/mount -o remount,commit=5 /
+        # Give the block layer a scheduler at all. nick's default is `none`
+        # -- FIFO dispatch with zero read/write fairness, so one write flood
+        # parks a queue of multi-second requests in front of every read.
+        #
+        # Measured on nick 2026-09-03, same 512 MB `dd` under each
+        # scheduler. bfq is a PARTIAL improvement, not a fix -- claimed
+        # accordingly:
+        #   throughput      none 3.0 MB/s   bfq 3.0 MB/s  (no change, as expected)
+        #   sshd banner     none timed out  bfq 22/22 answered, worst 6.19s
+        #   full ssh cmd    (not measured)  bfq 3/5 timed out at 20s,
+        #                                   the 2 that landed took 7.6s
+        # So bfq keeps the cheapest path (an already-resident sshd
+        # accepting and writing its version string) alive, but a real
+        # session -- forking a child, reading keys, PAM, spawning a shell,
+        # all of it faulting pages off the same wedged card -- still
+        # starves. Kept because it costs nothing and measurably helps, NOT
+        # because it solves the freeze. The card is the actual problem
+        # (2.5-3.0 MB/s write, ~2.9s average write-request latency, against
+        # 23.8 MB/s reads at the bus ceiling); see issue #18 and
+        # docs/incidents/nick-generation-8-upgrade.md.
+        #
+        # mq-deadline is the fallback if bfq isn't built. Best-effort --
+        # device name and available schedulers vary, and this must never
+        # fail a switch.
+        for dev in /sys/block/mmcblk*/queue/scheduler; do
+          [ -w "$dev" ] || continue
+          if /usr/bin/grep -q bfq "$dev"; then
+            echo bfq > "$dev" || :
+          elif /usr/bin/grep -q mq-deadline "$dev"; then
+            echo mq-deadline > "$dev" || :
+          fi
+        done
       '';
       # Background health sampler for `switch` -- appends free-memory/
       # loadavg/dirty-page/D-state-process snapshots to a log every 5s,
