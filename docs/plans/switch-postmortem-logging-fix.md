@@ -1,7 +1,33 @@
 # Plan: make switch postmortem logging survive a hard freeze
 
-**Status:** approved, not yet implemented. Written 2026-09-03 after nick's
-tenth failed switch attempt.
+**Status:** approved, not yet implemented, and **partly overtaken by events.**
+Written 2026-09-03 after nick's tenth failed switch attempt.
+
+> **Update, later on 2026-09-03 — read this before implementing.** nick's SD
+> card was finally benchmarked and is the root cause: 2.5–3.0 MB/s sequential
+> write, ~2.9 s average write-request latency, against 23.8 MB/s reads at the
+> bus ceiling. A plain 512 MB `dd` on an idle machine reproduces the
+> attempt-10 starvation signature with no nix involved. Card replacement is
+> filed as issue #18, and the measurements are in
+> [../incidents/nick-generation-8-upgrade.md](../incidents/nick-generation-8-upgrade.md).
+> Three consequences for this document:
+>
+> 1. **Decision 9 (`psi=1`) is dead.** `/proc/config.gz` on nick reports
+>    `# CONFIG_PSI is not set` — the kernel has no PSI support, so the cmdline
+>    flag would do nothing and the reboot would be wasted. Use
+>    `/sys/block/mmcblk0/stat` instead: it is populated, it is a plain file
+>    read, and it is where the write-latency numbers above came from.
+> 2. **The "Correction to the record" section has been applied** to both
+>    `docs/incidents/nick-generation-8-upgrade.md` and `docs/machines/nick.md`.
+>    That step is done; don't redo it.
+> 3. **The rest of the plan is still worth doing, but is no longer urgent.**
+>    Its value was making attempt 11 diagnosable; attempt 11's problem is now
+>    diagnosed. Build it when convenient, or fold it into the work that follows
+>    the card swap — and see the review notes for a set of bugs in the design
+>    as written (`sleep` and `date` are forks; `sudo` scrubs `SWITCH_LOG_HOST`;
+>    a dead UDP socket fails permanently; `nc -u -l` is a flavor trap; the
+>    `switch` alias cannot run on nick's gen 8 at all, so the logic belongs in
+>    a committed `switch-run.sh` rather than a nix string).
 
 **Audience:** whoever (human or agent) picks this up next. Every design
 decision below was already argued through and settled — this document exists

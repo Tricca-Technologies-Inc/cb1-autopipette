@@ -322,21 +322,26 @@ health-sampler log (and this session's hand-rolled equivalent) writes to
 `/var/log/tricca-switch-manual/`, `sync`ing every 5 seconds specifically so
 a hard freeze wouldn't lose the trail. It didn't work. `mount` after reboot
 showed `/var/log` on this hardware is `/dev/zram1` — a RAM-backed
-filesystem, presumably Armbian's stock ram-log setup, periodically
-synced back to a real on-disk copy at `/var/log.hdd` (or at clean
-shutdown). `sync()` inside a RAM-backed filesystem flushes to RAM, not to
-the SD card — it does nothing to protect against power loss. Confirmed the
-scope of the problem via `journalctl --list-boots` after the reboot: the
-boot spanning this entire attempt (16:17–17:53ish) is missing/truncated in
-journald's own persistent record too, for the identical reason. **There is
-currently no way to recover any diagnostic data from a hard freeze on this
-hardware** — not our custom log, not even systemd's own journal — because
-both live on zram and a hard power-cycle happens before either gets synced
-to `/var/log.hdd`. This defeats the entire point of the postmortem-logging
-half of PR #15 for exactly the failure mode it exists to catch. Needs
-fixing: point the health sampler (and ideally `switch`'s own log) at
-`/var/log.hdd/tricca-switch-manual/` directly, bypassing zram, so a freeze
-actually leaves a trail next time.
+filesystem, Armbian's stock `armbian-ramlog` setup, rsynced back to a real
+on-disk copy at `/var/log.hdd` from `cron.daily` only. `sync()` inside a
+RAM-backed filesystem flushes to RAM, not to the SD card — it does nothing
+to protect against power loss, so a hard power-cycle discards up to a day
+of it. This defeats the entire point of the postmortem-logging half of
+PR #15 for exactly the failure mode it exists to catch.
+
+**Correction (2026-09-03).** An earlier version of this section also claimed
+systemd's own journal was lost to zram for the same reason. **That is
+wrong.** `/var/log/journal` is a **symlink to `/var/log.hdd/journal`** —
+journald writes straight to persistent disk, bypassing zram entirely, and
+it *did* capture this attempt: 3350 lines in the 16:00–18:05 window, going
+silent at 17:43:01 mid-wifi-reconnect, which is the expected cutoff for a
+hard freeze on any storage medium. What was actually lost is narrower:
+**our own sampler log, and only because of where it was written.** The fix
+is correspondingly narrower — see
+[docs/plans/switch-postmortem-logging-fix.md](../plans/switch-postmortem-logging-fix.md)
+for why the destination should be `/var/lib/tricca-switch/` rather than
+`/var/log.hdd/` (Armbian mirrors the latter back *into* the 50 MB zram on
+every boot, with `--delete`).
 
 Also notable: this is the **first attempt where `--accept-flake-config` and
 the throttle flags were correctly present for the entire run**, ruling out
@@ -346,6 +351,82 @@ the dirty-page tuning existed. This doesn't disprove the tuning (it's still
 the reason this run lasted 80 minutes under real load instead of 15–30),
 but it does confirm the tuning narrows the ceiling rather than removing it,
 now with the from-source-build variable fully controlled for.
+
+## Root cause, found 2026-09-03 (after attempt 10): the SD card is too slow to write
+
+Ten attempts assumed nick's card was merely *slower* than marie's. That was
+never actually measured. It was measured on 2026-09-03, on an idle nick, and
+the numbers end the investigation:
+
+| Measurement | nick (SanDisk `SC16G`, 16 GB, mfd 12/2022) |
+|---|---|
+| Sequential write, buffered + `fsync` | **3.0 MB/s** |
+| Sequential write, `O_DIRECT` | **2.5 MB/s** |
+| Sequential read, `O_DIRECT` | 23.8 MB/s — at the high-speed bus ceiling |
+| Small-file write, 500 × 32 KB (nix copy-in shape) | 2.31 MB/s, 74 files/s |
+| Average write-request latency (`/sys/block/mmcblk0/stat`) | **~2.9 s** |
+| Average read-request latency | 13.8 ms |
+
+Reads run at line rate while writes are ~200× slower *per request*, which
+rules out the host controller, the bus and the driver — it is the card's own
+flash/controller. Everything in the history above follows from it directly:
+dirty pages accumulating faster than they drain (attempt 5's exact
+observation), every writer piling into D-state on a device with multi-second
+write latency, and the box wedging.
+
+**The clincher:** a plain `dd if=/dev/zero of=/var/tmp/ddtest bs=1M count=512
+conv=fsync` — on an otherwise idle machine, no nix, no switch, no closure —
+reproduced the attempt-10 starvation signature exactly: SSH began returning
+`Connection timed out during banner exchange` while ICMP still mostly
+answered, and it recovered on its own once the write drained. Whatever else
+is true, a board that writes at 3 MB/s cannot absorb a multi-gigabyte closure
+copy-in, and no combination of flags changes that.
+
+Two contributing factors on the same device, both worth fixing regardless:
+
+- **`/` is at 81% used, 2.7 GB free.** It was 67% at attempt 2. ext4
+  allocation degrades as a filesystem fills, and 2.7 GB is thin for a large
+  closure — Nix's `min-free` GC (PR #13) will fire *during* the switch and add
+  delete I/O concurrently with the copy-in. Run `gc` before any further
+  attempt.
+- **The block queue had no I/O scheduler** (`scheduler: [none]`). FIFO
+  dispatch, no read/write fairness, `nr_requests=64` — so one write flood
+  parks a queue of multi-second requests ahead of every read, and sshd,
+  journald and the kiosk starve behind them. `modules/io-tuning.nix` now
+  selects `bfq` (fallback `mq-deadline`).
+
+  **Measured, not assumed** — the same 512 MB `dd` was run under each
+  scheduler on 2026-09-03, and bfq is a *partial* improvement:
+
+  | | `none` | `bfq` |
+  |---|---|---|
+  | dd throughput | 3.0 MB/s | 3.0 MB/s — no change, as expected |
+  | sshd banner during the flood | timed out | 22/22 answered, worst 6.19 s |
+  | full `ssh host 'command'` during the flood | (not measured) | **3 of 5 timed out at 20 s**; the 2 that landed took 7.6 s |
+
+  bfq keeps the cheapest path alive — an already-resident sshd accepting a
+  connection and writing its version string — but a real session, which
+  forks a child and faults keys, PAM and a shell off the same wedged card,
+  still starves. **Keep it because it costs nothing and measurably helps;
+  do not treat it as a fix.** Single run per side, so treat the exact
+  numbers as indicative rather than precise.
+
+**Action: replace the card.** The mitigation stack below stays worth using —
+it is what turned five straight freezes into three clean failures and an
+80-minute run — but it narrows the window rather than removing the ceiling,
+and now there is a number explaining why.
+
+Also established while measuring, both correcting earlier assumptions:
+
+- **PSI is unavailable on this kernel.** `/proc/config.gz` reports
+  `# CONFIG_PSI is not set`, so adding `psi=1` to `armbianEnv.txt` would
+  accomplish nothing. `/sys/block/mmcblk0/stat` is the substitute and is
+  where the latency figures above came from.
+- **cgroup v2 offers `cpuset cpu io memory pids misc`**, with
+  `CONFIG_BLK_CGROUP_IOLATENCY`, `CONFIG_BLK_CGROUP_IOCOST` and
+  `CONFIG_IOSCHED_BFQ` all `y` — so per-cgroup I/O and memory limits on the
+  switch itself (`systemd-run --scope -p IOWriteBandwidthMax=...`) are
+  available if a future attempt wants to bound the writer by construction.
 
 ## What's confirmed to work, and should always be used together
 
@@ -394,11 +475,14 @@ now with the from-source-build variable fully controlled for.
 
 ## Open items
 
-- **Postmortem logging doesn't survive a freeze** (found in attempt 10):
-  `/var/log` is zram-backed and wiped by a hard power-cycle before it syncs
-  to `/var/log.hdd`. Repoint the health sampler and switch's own log output
-  at `/var/log.hdd/tricca-switch-manual/` directly. Until this lands, a
-  freeze leaves zero diagnostic trail — not our log, not the journal.
+- **Replace nick's SD card** — the root cause, measured 2026-09-03 (see the
+  section above). Everything else on this list is secondary to it.
+- **Sampler logging doesn't survive a freeze** (found in attempt 10):
+  `/var/log` is zram-backed and wiped by a hard power-cycle before
+  `cron.daily` rsyncs it to `/var/log.hdd`. journald is *not* affected (its
+  directory is a symlink onto persistent disk) — only our own sampler log.
+  Fix plan, with the destination and sampler design already argued through:
+  [docs/plans/switch-postmortem-logging-fix.md](../plans/switch-postmortem-logging-fix.md).
 - Nick's onboard ethernet PHY has never been detected — a wired link would
   remove the local-wifi-flakiness variable entirely. Still needs a hands-on
   hardware look.
