@@ -13,7 +13,7 @@ state, operator personas).
 **Machine**:
 One physical BIGTREETECH CB1 unit running Armbian, with this repo checked
 out at `/opt/cb1-autopipette`, driving exactly one rig. Named individually
-(marie, nick — see CLAUDE.md's `## Current machines`). The app repo's
+(marie, nick — see `docs/machines/`). The app repo's
 `Tricca_AutoPipette/CONTEXT.md` calls this same referent "host" (the
 computer running `tapd`) — same thing, different repo's established word;
 use "machine" within this repo.

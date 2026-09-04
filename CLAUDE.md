@@ -79,7 +79,8 @@ built it doubles as design history, and README.md is the operator doc.
   (flake.nix's `system-managerRev`), NOT floating to upstream's latest. An
   unpinned CLI invocation drifts out of sync with the system-manager
   LIBRARY pinned in flake.lock (used to build the config the CLI
-  activates) — this bit us 2026-07-30, see README field notes.
+  activates) — this bit us 2026-07-30, see
+  [docs/incidents/2026-07-30-oom-corruption-kernel-panic.md](docs/incidents/2026-07-30-oom-corruption-kernel-panic.md).
 - Helpers (modules/aliases.nix → /etc/profile.d): `switch`,
   `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
   `flash-manta` (reflash the Manta board firmware, see Architecture)
@@ -101,7 +102,8 @@ built it doubles as design history, and README.md is the operator doc.
 
 1. Nix-generated units have nix-store-only PATH. Call apt binaries by
    ABSOLUTE path (/usr/bin/plymouth, iproute2 via `path = [...]`).
-   `command -v` guards fail silently; `|| true` hides it.
+   `command -v` guards fail silently; `|| true` hides it. Worked examples:
+   [docs/incidents/nix-store-path-gaps.md](docs/incidents/nix-store-path-gaps.md).
 2. If a failing derivation hash didn't change, Nix didn't see the change —
    check git status / flake.lock, not the code.
 3. A clean switch ≠ machine matches repo. Grep switch output for WARN
@@ -133,44 +135,13 @@ built it doubles as design history, and README.md is the operator doc.
     (see Moonraker's own `scripts/set-policykit-rules.sh` for the pattern
     modules/moonraker.nix now follows).
 
-## Current machines
+## Machine status
 
-Live snapshot only — overwrite these in place as status changes, don't
-append history here. Incident write-ups and hard-won lessons belong in
-README's `## Field notes (hard-won)` instead.
-
-- `marie` — Armbian 26.5.1 trixie, kernel 6.18.33-current-sunxi64. Last
-  confirmed live 2026-07-28: all 7 services green, Manta firmware
-  reflashed to match the pinned Klipper source, PolicyKit + tty2 debug
-  console verified end-to-end. Not re-switched since — missing nick's
-  PATH-gap/splash/klippy-logfile fixes and this session's agent-skills+ADR
-  docs work; machine state not reverified this session.
-- `nick` — bootstrapped 2026-08-06. All 7 services green and running, but
-  the running config is **stuck on system-manager generation 8 (built
-  2026-08-13)** — repo is current at `main` (`34f36ed`), but 7 switch
-  attempts across 2026-08-31/09-01 all failed to activate a new
-  generation. First 5 hard-froze the machine (whole-system memory/SD-card
-  I/O collapse — full writeup in session notes, not yet in README/ADR);
-  a live (uncommitted) `sysctl` dirty-page/ext4-commit tuning fixed the
-  freezing, but the next 2 attempts then hit nick's flaky mobile-hotspot
-  link instead (cache download failures, clean non-fatal errors). Still
-  on a mobile hotspot: no wired NIC detected, PHY undetected on onboard
-  ethernet, worth a hands-on hardware look — may also explain the
-  download flakiness. Splash rebuild verified at the system level (theme
-  active, plymouth-quit masked, kernel cmdline has `splash`); on-screen
-  appearance not eyes-on verified. Next switch attempt should check link
-  quality first and, if it succeeds, commit the dirty-page tuning
-  properly (currently lost on reboot).
-
-## State: tapd control daemon shipped and verified; live hardware runs in progress
-
-The old subprocess-bridge architecture (kiosk spawning `tap` as a
-subprocess) is GONE, replaced by tapd (see Architecture) — this was the
-owner's own TODO from the last session, now done and pinned. Verified:
-kiosk correctly lists `/protocols` and reports `/status` through tapd's
-control-plane websocket, homing succeeded, Mainsail jog commands worked
-after the MCU serial fix. Not yet verified: a complete, successful
-liquid-handling run of a real `.pipette` protocol through the kiosk.
+Live per-machine snapshots and fleet-wide feature status live in
+[`docs/machines/`](docs/machines/) now, not here — check there for current
+state (`nick`, `marie`, tapd verification status). Update those files in
+place as status changes; incident write-ups and hard-won lessons belong in
+[`docs/incidents/`](docs/incidents/) instead.
 
 ## Style for this project
 
@@ -178,7 +149,9 @@ Owner: James, Edmonton-based, Linux/Doom Emacs, direct communicator —
 expects verification over confidence (check the actual file/device state
 before asserting; this repo's history includes several bugs from editing
 by memory). Conversation-as-documentation matters: when a debugging session
-teaches a rule, it goes into README field notes.
+teaches a rule, the full narrative goes into `docs/incidents/` and a short
+evergreen one-liner (if there's an ongoing action for a human to take) goes
+into README's Troubleshooting section.
 
 ## Agent skills
 

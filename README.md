@@ -39,6 +39,9 @@ config/moonraker.conf           nix-managed, read-only
 config/klipper-host-mcu.config  Kconfig for the on-board host MCU build
 config/tricca-logo.png          splash watermark source
 splash/                         theme installer + splash documentation
+docs/adr/                       architecture decision records
+docs/incidents/                 past debugging write-ups (see docs/incidents/README.md)
+docs/machines/                  live per-machine status (see docs/machines/README.md)
 ```
 
 Klipper's `printer.cfg` (+ `mainsail.cfg`, `tricca-autopipette.cfg`) seed
@@ -140,7 +143,13 @@ SAVE_CONFIG calibration values · TLS/tailscale identities if added.
 Everything else must come from this repo — if a machine works and the repo
 doesn't say why, that's a bug in the repo.
 
-## Field notes (hard-won)
+## Troubleshooting
+
+Short, evergreen gotchas — things worth knowing before you go debug from
+scratch. Past incidents (root-cause forensics, dates, commit-by-commit
+walkthroughs) live in [`docs/incidents/`](docs/incidents/) instead; check
+there for the full story behind any of these, or if a new issue doesn't
+match anything below.
 
 - **If the failing drv hash didn't change, Nix didn't see your change.**
   Check `git status` — with a git-based flake, uncommitted/unpulled state
@@ -158,101 +167,52 @@ doesn't say why, that's a bug in the repo.
 - **`mcu 'mcu': Unable to connect` at Klipper startup means a serial-ID
   mismatch, not a wiring/permissions problem.** The Manta's USB serial ID is
   unique per physical board, so it can never live in the shared
-  `tricca-autopipette.cfg` macros file — `bootstrap.sh` now auto-detects it
-  from `/dev/serial/by-id/usb-Klipper_*` and writes it into printer.cfg
+  `tricca-autopipette.cfg` macros file — `bootstrap.sh` auto-detects it from
+  `/dev/serial/by-id/usb-Klipper_*` and writes it into printer.cfg
   (machine-owned) instead. Check `dmesg | grep -i acm` and
   `/dev/serial/by-id/` against printer.cfg's `[mcu]` section if this recurs.
-- **A Python package's `Path(__file__).parents[N]` repo-root trick breaks once
-  installed.** `tricca_autopipette`'s `DefaultPaths.DIR_REPO_ROOT` assumed a
-  `src/`-layout git checkout; any installed package (Nix, pip, wheel) drops
-  the `src/` segment and the count comes up one directory short, with no
-  `config/`/`protocols/`/`gcode/` underneath. Fixed upstream via
-  `AUTOPIPETTE_REPO_ROOT` (Tricca_AutoPipette@cbd16de); `modules/tapd.nix`
-  sets it to `/var/lib/autopipette`.
 - **`Error during activation: EOF while parsing a value at line 1 column 0`
-  while "Reading etc file definitions" means a 0-byte manifest, not a config
-  error.** `wc -c` the generation's `etcFiles.json`/`services.json` under its
-  store path to confirm. Cause: a build got interrupted (OOM-prone on the
-  CB1's 1GB RAM) leaving Nix's local store DB marking an output "valid" when
-  it's actually empty/corrupt. `nix store verify --repair` can't fix this —
-  these are local-only derivations with no substituter to re-fetch from, so
-  it just reports the mismatch and exits 0. The real fix is forcing a genuine
-  local rebuild of the whole closure: `nix build .#systemConfigs.default
-  --repair -o <path>`, then `switch` again. Verify it's *not* hardware
-  bit-rot first: `dmesg` for I/O errors, and check whether the *currently
-  active* generation's copies of the same files are healthy (2026-07-30
-  incident: only outputs from the one bad build session were affected).
-- **`switch` pins the system-manager CLI to the exact rev in `flake.lock`
-  (`system-managerRev` in flake.nix), not upstream's latest.** An unpinned
-  `nix run github:numtide/system-manager` floats independently of the
-  system-manager *library* pinned in flake.lock (used to build the config
-  the CLI activates) — a real gap, though in the 2026-07-30 incident above
-  it turned out not to be the actual cause (pinning the CLI to the exact
-  flake.lock rev reproduced the identical corruption).
-- **Pinning the system-manager CLI rev is not enough on its own — pass
-  `--accept-flake-config` too, or it silently compiles the CLI from source.**
-  system-manager's own `flake.nix` declares `nixConfig.extra-substituters =
-  cache.numtide.com` (prebuilt aarch64-linux binaries for the CLI, including
-  its Rust build deps like `userborn`). Without `--accept-flake-config`, Nix
-  refuses to trust that substituter (`warning: ignoring untrusted flake
-  configuration setting`) and falls back to building the Rust CLI on-device
-  instead — `rustc`/`lto1` OOM-killed `nick`'s 1GB RAM outright on first
-  encounter, and on a retry caused an actual kernel panic
-  (`hung_task: blocked tasks`, `mmc_sd_detect` stuck claiming the MMC host —
-  the sustained heavy write I/O from unpacking hundreds of store paths wedged
-  the SD card controller badly enough that `khungtaskd` gave up and panicked
-  rather than hang forever). Both `bootstrap.sh` and the `switch` alias now
-  pass `--accept-flake-config`; verified this pulls the CLI as a single fast
-  `cache.numtide.com` fetch instead of a multi-minute local Rust build.
+  while "Reading etc file definitions" means a 0-byte manifest** (an
+  interrupted build left a corrupt output), not a config error. Fix:
+  `nix build .#systemConfigs.default --repair -o <path>`, then `switch`
+  again. Full forensics:
+  [2026-07-30 incident](docs/incidents/2026-07-30-oom-corruption-kernel-panic.md).
+- **`switch` always needs `--accept-flake-config`** (the `switch` helper and
+  `bootstrap.sh` already pass it) — without it, Nix rejects
+  system-manager's own binary-cache substituter and silently compiles its
+  Rust CLI from source on-device instead, which has caused both an OOM-kill
+  and a kernel panic on a 1GB-RAM machine. Also pins the CLI to the exact
+  rev in `flake.lock` (`system-managerRev` in `flake.nix`), not upstream's
+  latest, so it can't drift out of sync with the pinned system-manager
+  *library* used to build the config it activates. Full story:
+  [2026-07-30 incident](docs/incidents/2026-07-30-oom-corruption-kernel-panic.md).
 - **On a slow/lossy link (mobile hotspot, weak wifi), also add `--max-jobs 1
-  --cores 1 --http-connections 2`.** Nix's default `http-connections = 25`
-  opens up to 25 simultaneous downloads — fine on real wifi, but on a bad
-  link it causes many files to fail at once (`Failed sending data to the
-  peer`, `Stream error in the HTTP/2 framing layer`) and cascades into
-  `Cannot build '<drv>'. Reason: 1 dependency failed.` A stalled-looking log
-  (no new "copying path" line for minutes) is not necessarily hung — Nix
-  only prints on a download's *error* or *completion*, so a large file (e.g.
-  `rustc`, ~250MB) downloading normally over a slow link produces no output
-  for a long time. Check `ps -o stat,wchan` on the switch process before
+  --cores 1 --http-connections 2`** (also already in the `switch` helper).
+  Nix's default `http-connections = 25` opens up to 25 simultaneous
+  downloads — fine on real wifi, but on a bad link it causes many files to
+  fail at once and cascades into `Cannot build '<drv>'. Reason: 1 dependency
+  failed.` A stalled-looking log (no new "copying path" line for minutes) is
+  not necessarily hung — Nix only prints on a download's *error* or
+  *completion*. Check `ps -o stat,wchan` on the switch process before
   assuming a hang: `S` (interruptible sleep) with no D-state processes means
   it's waiting on network I/O, not actually stuck.
 - **PATH gaps in Nix units aren't only apt tools — our own scripts hit them
-  too.** Nix-generated systemd units get a nix-store-only `PATH`; any
-  absolute-path-free call is at risk, not just vendor scripts. Found in
-  three places so far: kiosk-xinitrc's `xset` calls (screen blanking/DPMS/
-  screensaver) silently never ran until pathed to `/usr/bin/xset` (commit
-  0e0f97d); kiosk's `/etc/chromium.d/dev-shm` hook couldn't find `findmnt`,
-  fixed via `path = [ pkgs.util-linux ]` (commit 201acda); moonraker's
-  `preStart` polkit-rules idempotency check (`cmp`, from `diffutils`)
-  silently failed every boot, rewriting the rules file unconditionally
-  instead of only on change (commit 40a4f00). All three failed with no
-  error anywhere. Verifying a `path = [...]` fix on an already-running
-  service needs an explicit `systemctl restart <unit>` — a plain `switch`
-  reloads the unit file but doesn't restart what's already running.
-- **`plymouth-set-default-theme -R` can report success without rebuilding
-  the initramfs.** It shells out to `update-initramfs -u -k all`, and on
-  this board `-k all`'s kernel autodetection finds nothing — it exits 0
-  regardless ("Nothing to do, exiting."). `splash/install-tricca-theme.sh`
-  now rebuilds by exact kernel version and verifies with `lsinitramfs`
-  instead of trusting the tool's exit code (commit 65b3580).
-- **klippy needs an explicit `--logfile` or you get no persistent log at
-  all.** With none set it just logs `WARNING:root:No log file specified!
-  Severe timing issues may result!` on every start, with nothing to
-  correlate against future timing anomalies. Point it at
-  `/var/lib/moonraker/logs/klippy.log` — moonraker's own log dir, so
-  Mainsail's log viewer picks it up too — and have `klipper.service`'s
-  `preStart` create that dir itself (klipper starts before moonraker in
-  unit ordering, so moonraker hasn't created its data-dir tree yet)
-  (commit 9374da0).
+  too.** Nix-generated systemd units get a nix-store-only `PATH`; any call
+  to a binary by bare name (not an absolute path or a declared `path =
+  [...]`) is at risk, and fails with no error anywhere. Worked examples:
+  [nix-store-path-gaps.md](docs/incidents/nix-store-path-gaps.md).
+  Verifying a fix on an already-running service needs an explicit
+  `systemctl restart <unit>` — a plain `switch` reloads the unit file but
+  doesn't restart what's already running.
 - **A burst of klippy "Resetting prediction variance" clock resyncs on
   `klipper-mcu.service` is not a motion-timing issue.** That unit is the
   host-emulated `CB1` MCU (no real oscillator) — not the physical Manta
   board — so resyncs there carry no motion-timing risk. On a 1GB-RAM box,
   swap pressure is the likely trigger; check swap usage before chasing it
   as a hardware problem.
-- **mainsail-nginx's `[alert] could not open error log file` is cosmetic
-  but still worth fixing at the source.** `error_log stderr` already
-  handles real logging, but nginx still tries (and fails) to open its
-  default error log path if `/var/log/nginx` doesn't exist, firing the
-  alert on every start. `preStart` now creates the directory (commit
-  2d5bfe3).
+- **A large `switch` (e.g. a multi-week jump on `nick`) can wedge the whole
+  machine, not just the build** — this is an active, only-partially-solved
+  problem specific to low-RAM/SD-card machines, not a quick gotcha. See
+  [nick's generation-8 upgrade history](docs/incidents/nick-generation-8-upgrade.md)
+  for the full mitigation stack (dirty-page tuning, stopping the kiosk
+  first, throttled builds) before attempting one.
