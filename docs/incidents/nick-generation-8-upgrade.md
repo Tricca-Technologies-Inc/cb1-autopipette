@@ -1,17 +1,34 @@
 # nick: stuck on generation 8 — upgrade attempt history
 
-**Status as of this writing: unresolved.** `nick` has been running
-system-manager generation 8 (built 2026-08-13) since then. The repo has
-moved on past `34f36ed`, but every attempt since to run `switch` and
-activate a new generation has failed — ten attempts across five sessions
-(2026-08-31 through 2026-09-03), documented in full blow-by-blow detail in
-session memory. This file is the condensed version: what we tried, why it
-failed each time, and what to actually do next time.
+**Status: resolved 2026-09-08 — see below.** After ten failed attempts
+across five sessions (2026-08-31 through 2026-09-03), and a fresh SD card
++ ethernet fix that still hit the identical panic on 2026-09-08 (see
+[2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md)),
+the two-phase build-elsewhere approach floated repeatedly in this doc's own
+open items finally got tried for real and worked: build
+`systemConfigs.default` on a workstation (`prime.sh`), push the closure
+over local-network SSH, then run the switch on nick against an
+already-populated store. Nick switched cleanly on the first attempt with
+this approach — no panic, no freeze, ~1 minute wall-clock. A second,
+smaller follow-up switch (a one-line fix, 7 store paths) went just as
+cleanly. **Nick is now on a live generation, all 7 services active, for
+the first time since generation 8 (built 2026-08-13).**
 
-This is deliberately *not yet* folded into README's Troubleshooting section
-or ADR-0009 — several of the mechanisms below are still not proven fixed by
-a real successful switch, only proven *less bad*. Promote the confirmed
-parts once a switch actually completes end to end.
+This does not root-cause *why* the panic happens — see the 2026-09-08
+incident doc's "leading theory" (small-file/nix-copy-in write shape,
+independent of a card's sequential-throughput numbers) for what's still
+unconfirmed. What this proves is a **reliable operational workaround**:
+whatever's wrong is provoked by the *volume* of on-device writes a normal
+`switch` does, not by anything inherent to activation itself. Priming
+first keeps that volume small enough to never trigger it, every time
+tried so far (n=2). **Recommended going forward: always prime nick,
+never `switch` directly on-device, until the underlying cause is actually
+understood** (tracked in issue #22).
+
+Everything below is the historical attempt-by-attempt record that led
+here — kept for the mitigations it validated (dirty-page tuning, detached
+switch execution, `--accept-flake-config`, etc.), all of which remain
+relevant on top of priming, not instead of it.
 
 ## Why this is happening at all
 
@@ -475,8 +492,13 @@ Also established while measuring, both correcting earlier assumptions:
 
 ## Open items
 
-- **Replace nick's SD card** — the root cause, measured 2026-09-03 (see the
-  section above). Everything else on this list is secondary to it.
+- **Resolved 2026-09-08**: nick switched successfully via `prime.sh` (see
+  the status note at the top of this file). SD card was replaced
+  2026-09-03/2026-09-08 (issue #18, closed) and ethernet fixed
+  2026-09-08, but the panic itself recurred even on the new hardware —
+  what actually got nick running was priming, not the card/ethernet
+  fixes. Root cause of the panic is still open, tracked as issue #22.
+- ~~Replace nick's SD card~~ — done 2026-09-08 (issue #18, closed).
 - **Sampler logging doesn't survive a freeze** (found in attempt 10):
   `/var/log` is zram-backed and wiped by a hard power-cycle before
   `cron.daily` rsyncs it to `/var/log.hdd`. journald is *not* affected (its
