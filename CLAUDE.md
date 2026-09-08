@@ -65,10 +65,19 @@ built it doubles as design history, and README.md is the operator doc.
   [ADR-0008](docs/adr/0008-ci-full-build-not-eval-only-no-self-hosted-runner.md).
 - `switch` builds `systemConfigs.default` on the machine itself, requiring
   that machine's own internet — fine on a good link, a real problem on
-  wifi/hotspot-only lab machines. `prime.sh` (workstation-side) builds the
-  closure elsewhere and pushes it over local-network SSH instead, so the
-  machine's own internet quality stops mattering; `modules/nix-settings.nix`
-  grants the trust that push needs. See
+  wifi/hotspot-only lab machines, and (found 2026-09-08) a machine that has
+  to build/fetch a real chunk of closure on-device risks a kernel panic
+  outright (`hung_task`/`mmc_rescan`, root cause still unconfirmed, issue
+  #22) regardless of link quality. `prime.sh` (workstation-side) builds the
+  closure elsewhere and pushes it over local-network SSH instead, so
+  `switch` only ever activates an already-primed closure. **This is now
+  enforced, not optional**: `switch` and `bootstrap.sh`'s first switch both
+  refuse to proceed unless the closure is already primed (escape hatch:
+  `FORCE_ON_DEVICE_SWITCH=1`, expect the same panic risk).
+  `modules/nix-settings.nix` grants the trust that push needs
+  declaratively; `bootstrap.sh` also grants it imperatively right after
+  installing Nix, since priming has to work *before* any switch has ever
+  activated the declarative version. See
   [ADR-0009](docs/adr/0009-prime-workstation-build-push.md).
 
 ## Commands
@@ -84,19 +93,25 @@ built it doubles as design history, and README.md is the operator doc.
 - Helpers (modules/aliases.nix → /etc/profile.d): `switch`,
   `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
   `flash-manta` (reflash the Manta board firmware, see Architecture)
-- Machine on wifi/hotspot too slow/unreliable for `switch` to build
-  on-device: `./prime.sh <host> [ssh-user]` from a WORKSTATION checkout
+- **Always prime before switch, on every machine** — `switch` refuses
+  otherwise: `./prime.sh <host> [ssh-user]` from a WORKSTATION checkout
   first — builds `systemConfigs.default` there, pushes the closure over
-  local-network SSH, so `switch` on the machine finds it already built.
-  See ADR-0009. Intended pilot: `nick`; not yet run on either machine.
+  local-network SSH, so `switch` on the machine finds it already built and
+  just activates it. See ADR-0009 (2026-09-08 update: this is enforced by
+  tooling now, not just recommended for slow links). Proven on `nick`
+  2026-09-08, twice, clean both times.
 - Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs|system-manager]`,
   commit flake.lock, PR (main's branch protection requires the `flake-check`
   CI build to pass before any update lands, direct push included — see
-  ADR-0008); machines `git pull && switch` once merged. Never edit the lock
-  on a machine.
-- New machine: flash Armbian minimal (kernel ≥6.x), ethernet,
-  `sudo bash bootstrap.sh` (interactive: hostname), then wifi via nmcli,
-  MCU serial via Mainsail, reboot.
+  ADR-0008); machines `git pull`, prime, then `switch` once merged. Never
+  edit the lock on a machine.
+- New machine: flash Armbian minimal (kernel ≥6.x), get network (ethernet
+  or wifi), `git pull` this repo to `/opt/cb1-autopipette`,
+  `sudo bash bootstrap.sh` (interactive: hostname) — it stops with prime
+  instructions if the closure isn't primed yet; from a workstation
+  `./prime.sh <host> tricca`, then re-run `bootstrap.sh` to finish. Then
+  MCU serial via Mainsail (or via bootstrap.sh's own auto-detect), splash
+  eyes-on check, reboot.
 
 ## Hard-won rules (violating these cost real debugging days)
 

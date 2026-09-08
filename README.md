@@ -95,34 +95,44 @@ that's switched in:
    (or plain `nix flake update` to pick up everything). Commit
    `flake.lock`, push, PR, merge to `main` — branch protection requires the
    CI build (`.github/workflows/ci.yml`) to pass first.
-2. **On the machine**: `git pull` in `/opt/cb1-autopipette` (changes nothing
-   by itself — see CONTEXT.md's **Switch** entry), then either:
-   - **Good internet**: just `switch`. It builds `systemConfigs.default` and
-     fetches whatever it needs on-device.
-   - **Wifi/hotspot too slow or unreliable** (`marie`, `nick` — no ethernet
-     option on either): **prime first**. From the same workstation checkout,
-     same network as the machine (wifi or hotspot both work, doesn't need to
-     be ethernet — just the same local network, not routed over the
-     internet):
-     ```
-     ./prime.sh <machine-hostname-or-ip>
-     ```
-     Builds `systemConfigs.default` locally and pushes the closure straight
-     into the machine's Nix store over SSH. Then `switch` on the machine as
-     normal — it finds the build already done and just activates it. See
-     [ADR-0009](docs/adr/0009-prime-workstation-build-push.md) and
-     CONTEXT.md's **Prime** entry.
+2. **Prime first, always** — `switch` refuses to build or fetch on-device
+   by itself (see below for why) and will just print these same steps back
+   at you if you skip this. From the same workstation checkout, same
+   network as the machine (wifi or hotspot both work, doesn't need to be
+   ethernet — just the same local network, not routed over the internet):
+   ```
+   ./prime.sh <machine-hostname-or-ip>
+   ```
+   Builds `systemConfigs.default` locally and pushes the closure straight
+   into the machine's Nix store over SSH. See
+   [ADR-0009](docs/adr/0009-prime-workstation-build-push.md) and
+   CONTEXT.md's **Prime** entry.
 
-     One-time workstation setup `prime.sh` needs and checks for itself:
-     ```
-     sudo apt-get install -y qemu-user-static binfmt-support
-     echo 'extra-platforms = aarch64-linux' | sudo tee -a /etc/nix/nix.custom.conf
-     sudo systemctl restart nix-daemon
-     ```
-     The machine side of the trust needed for the push (`nix.settings.trusted-users`
-     for the `tricca` account) ships declaratively via
-     `modules/nix-settings.nix` — nothing to set up by hand there, it's live
-     after that module's first `switch`.
+   One-time workstation setup `prime.sh` needs and checks for itself:
+   ```
+   sudo apt-get install -y qemu-user-static binfmt-support
+   echo 'extra-platforms = aarch64-linux' | sudo tee -a /etc/nix/nix.custom.conf
+   sudo systemctl restart nix-daemon
+   ```
+   The machine side of the trust needed for the push (`nix.settings.trusted-users`
+   for the `tricca` account) is set imperatively by `bootstrap.sh` on every
+   machine now — nothing to set up by hand, unless priming a machine
+   bootstrapped before 2026-09-08 (see `prime.sh`'s own error message if so).
+3. **On the machine**: `git pull` in `/opt/cb1-autopipette` (changes
+   nothing by itself — see CONTEXT.md's **Switch** entry), then `switch`.
+   It finds the primed build already in the store and just activates it —
+   fast, and doesn't build or fetch anything itself.
+
+`switch` (and `bootstrap.sh`'s own first-switch step) actively **refuse**
+to proceed if the closure isn't already primed, rather than silently
+building/fetching on-device — an on-device build/fetch of this size has
+repeatedly panicked a CB1's kernel under real write load, even on healthy
+hardware (see
+[docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md)
+and issue #22 — root cause still unconfirmed, priming is a proven
+workaround, not a fix). There's a genuine-emergency-only bypass,
+`FORCE_ON_DEVICE_SWITCH=1 switch`, that does exactly what `switch` used to
+do unconditionally — expect it to risk the same panic.
 
 Moonraker's update_manager is intentionally absent — this pull+prime+switch
 flow is the only update path, deliberately.
@@ -162,6 +172,9 @@ match anything below.
   `--print-out-paths` to confirm.
 - **Nix builds from a root-owned `/opt` repo require root** (libgit2 ownership
   check); keep the repo root-owned and use the helpers.
+- **`switch` (or `bootstrap.sh`) refusing with "Not primed yet"** is
+  working as intended, not an error — run `./prime.sh <host>` from a
+  workstation first. See "Updating machines after an app change" above.
 - **`warning: unknown setting 'eval-cores'/'lazy-trees'`** — harmless
   Determinate-Nix settings read by upstream Nix components.
 - **`mcu 'mcu': Unable to connect` at Klipper startup means a serial-ID
