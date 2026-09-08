@@ -1,5 +1,17 @@
 # nick
 
+**2026-09-08 update:** SD card replaced (new card benchmarks 12-15x better
+on sequential write) and ethernet now works for the first time ever
+(Armbian PR #10155's AC300-EPHY fix, needs kernel ≥6.18). But the same
+MMC `hung_task` panic that's dogged every switch attempt since generation
+8 recurred on the new card/kernel anyway, even with a cpufreq-governor
+mitigation applied — root cause still not confirmed. Full write-up:
+[docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](../incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md).
+Machine is currently down (last panic left it unresponsive; needs a
+physical power-cycle). Everything below predates this and is superseded
+where it conflicts (in particular: ethernet now works, so the "still on a
+mobile hotspot" line below is stale).
+
 Bootstrapped 2026-08-06. All 7 services green and running, but the running
 config is **stuck on system-manager generation 8 (built 2026-08-13)** —
 repo is current at `main`, but ten switch attempts across five sessions
