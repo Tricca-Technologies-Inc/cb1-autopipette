@@ -58,8 +58,44 @@ if ! command -v nix >/dev/null 2>&1; then
   # shellcheck disable=SC1091
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
+# Grant tricca trust in the Nix daemon NOW, imperatively. modules/nix-settings.nix
+# declares the same trust (nix.settings.trusted-users = ["tricca"]) but -- like the
+# `switch` alias itself -- that only takes effect once a switch has already
+# activated a generation containing it, and priming (below) needs this trust
+# before any switch has ever run: chicken-and-egg, discovered 2026-09-08.
+# Determinate Nix regenerates /etc/nix/nix.conf itself on every daemon restart
+# (confirmed same day) -- nix.custom.conf is the actual, durable override file.
+if ! grep -q '^trusted-users' /etc/nix/nix.custom.conf 2>/dev/null; then
+  echo "trusted-users = root tricca" >> /etc/nix/nix.custom.conf
+  systemctl restart nix-daemon
+fi
 
 echo "==> [5/6] first system-manager switch"
+# Require the closure to already be primed from a workstation (./prime.sh) --
+# an on-device build/fetch of this size has repeatedly panicked nick's kernel
+# (hung_task/mmc_rescan/__mmc_claim_host under real write-volume load, on a
+# brand-new SD card, even with a cpufreq mitigation applied -- see
+# docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md and
+# issue #22; root cause still unconfirmed, this is a proven workaround, not a
+# fix). `nix build --dry-run` prints "will be built"/"will be fetched" lines
+# only when something's actually missing locally; silent output means primed.
+DRY_RUN_OUT=$(nix build "$REPO_DIR#systemConfigs.default" --dry-run 2>&1)
+if echo "$DRY_RUN_OUT" | grep -qE "will be (built|fetched)"; then
+  if [ "${FORCE_ON_DEVICE_SWITCH:-}" = "1" ]; then
+    echo "    WARNING: FORCE_ON_DEVICE_SWITCH=1 -- building/fetching on-device" >&2
+    echo "    anyway. This is the exact path that has panicked nick's kernel" >&2
+    echo "    before. Proceeding at your own risk." >&2
+  else
+    echo "    Not primed yet." >&2
+    echo "    From a WORKSTATION checkout of this repo, on the SAME NETWORK, run:" >&2
+    echo "        ./prime.sh <this machine's IP or hostname> tricca" >&2
+    echo "    then re-run this script -- it picks up from here." >&2
+    echo "    Emergency-only bypass (this is the exact path that has panicked" >&2
+    echo "    nick's kernel before -- see issue #22):" >&2
+    echo "        FORCE_ON_DEVICE_SWITCH=1 sudo bash bootstrap.sh" >&2
+    exit 1
+  fi
+fi
 # Pin the CLI to the exact system-manager rev in flake.lock -- same reason
 # as the `switch` alias (modules/aliases.nix): an unpinned `nix run
 # github:numtide/system-manager` floats to upstream's latest commit, which
@@ -80,6 +116,23 @@ netplan apply
 udevadm control --reload-rules
 udevadm trigger --subsystem-match=net
 systemctl restart NetworkManager
+
+echo "    Verifying services..."
+sleep 5
+FAILED_SERVICES=""
+for svc in klipper-mcu klipper moonraker tapd autopipette kiosk mainsail-nginx; do
+  if [ "$(systemctl is-active "$svc" 2>/dev/null)" != "active" ]; then
+    FAILED_SERVICES="$FAILED_SERVICES $svc"
+  fi
+done
+if [ -n "$FAILED_SERVICES" ]; then
+  echo "    WARNING: not active yet:$FAILED_SERVICES" >&2
+  echo "    Check with: systemctl status <service> / journalctl -u <service>" >&2
+  echo "    (klipper-mcu/klipper can take a few seconds -- wait and recheck" >&2
+  echo "    before assuming a real failure.)" >&2
+else
+  echo "    All 7 services active."
+fi
 
 echo "==> Detecting Manta M8P MCU serial ID"
 # USB serial IDs are unique per physical board, so tricca-autopipette.cfg

@@ -15,11 +15,13 @@ and the now-resolved
 
 **The panic's root cause is still not understood** — priming is a proven
 workaround (avoids the on-device write volume that seems to trigger it),
-not a fix. **Until issue #22 is closed, always prime nick — never run
-`switch` directly on-device.** IP is now `192.168.1.25` on ethernet (not
-the old hotspot addresses below). Nick's own `switch` alias is live now
-(first successful generation activates it) but should not be used per the
-above.
+not a fix. **This is now enforced by the tooling itself, fleet-wide, not
+just a followed recommendation**: `switch` and `bootstrap.sh` both refuse
+to build/fetch on-device and print prime instructions instead, until
+issue #22 is actually resolved (escape hatch for a genuine emergency:
+`FORCE_ON_DEVICE_SWITCH=1`). IP is now `192.168.1.25` on ethernet (not the
+old hotspot addresses below). Nick's own `switch` alias is live now (first
+successful generation activates it) and carries this gate.
 
 **klipper-mcu follow-up (2026-09-08):** crash-looped after the first
 switch (`sched_setscheduler: Operation not permitted`, kernel/cgroup

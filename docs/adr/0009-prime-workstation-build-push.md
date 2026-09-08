@@ -47,13 +47,43 @@ builds `systemConfigs.default` first; priming just means that build is
 already satisfied locally, so switch is fast. Intended pilot: `nick` first
 (the machine actually hotspot-constrained); not yet run on either machine.
 
+## Update, 2026-09-08 — priming became mandatory, not just a speed fix
+
+The original problem here (slow/unreliable wifi) turned out to have a much
+more serious sibling: an on-device `switch` that has to build or fetch a
+real chunk of its closure can panic a CB1's kernel outright —
+`hung_task`/`mmc_rescan`/`__mmc_claim_host`, reproduced twice on nick on a
+brand-new SD card and a fixed ethernet link, with a cpufreq mitigation
+applied and still no fix. Priming first — cutting the on-device write
+volume to near zero — avoided it both times it was tried. Root cause is
+still unconfirmed (issue #22); this is a proven workaround, not a fix.
+
+Consequence: priming is no longer "recommended for slow links," it's
+**enforced by the tooling itself**, on every machine, until #22 is
+resolved. Both `switch` (`modules/aliases.nix`) and `bootstrap.sh`'s first
+switch now gate on `nix build --dry-run` reporting nothing left to build
+or fetch, and refuse (with instructions) if that's not the case. An
+explicit `FORCE_ON_DEVICE_SWITCH=1` env var bypasses the gate for a
+genuine emergency, printing a loud warning that it's the exact path known
+to panic nick. Full write-up:
+[docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](../incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md).
+
+`bootstrap.sh` also now sets `tricca`'s Nix trust imperatively
+(`/etc/nix/nix.custom.conf`) right after installing Nix, rather than
+relying solely on the declarative grant below — a fresh machine needs to
+prime *before* any switch has ever activated that declarative config, a
+chicken-and-egg only found once bootstrap actually needed priming on the
+very first switch.
+
 ## Consequences
 
 - New workstation-side prerequisite: aarch64 build emulation, one-time
   setup, not managed by this flake (workstation isn't a machine this repo
   configures).
 - `bootstrap.sh`'s "switch is the only command you need" is no longer
-  quite the whole story for a hotspot-only machine — priming is optional
-  but expected in practice for `marie`/`nick`.
+  quite the whole story — priming is now a required first step on every
+  machine, enforced by `switch` and `bootstrap.sh` themselves (see above),
+  not just expected in practice for `marie`/`nick`.
 - Adds one trusted, non-root local user (`tricca`) on every machine, via
-  `modules/nix-settings.nix`.
+  `modules/nix-settings.nix` declaratively and via `bootstrap.sh`
+  imperatively (belt-and-suspenders for the chicken-and-egg above).

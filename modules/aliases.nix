@@ -54,6 +54,36 @@ in
       # output under /var/log/tricca-switch/ -- so a freeze leaves a
       # postmortem trail instead of nothing.
       switch() {
+        # Require the closure to already be primed from a workstation
+        # (./prime.sh) -- an on-device build/fetch of this size has
+        # repeatedly panicked nick's kernel (hung_task/mmc_rescan/
+        # __mmc_claim_host under real write-volume load, even on a brand-new
+        # SD card with a cpufreq mitigation applied -- see
+        # docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md
+        # and issue #22; root cause still unconfirmed, this is a proven
+        # workaround, not a fix. Keep this gate's shape in sync with
+        # bootstrap.sh's identical one. `nix build --dry-run` prints "will be
+        # built"/"will be fetched" lines only when something's actually
+        # missing locally; silent output means primed. Checked before
+        # touching any running service, so a refusal disturbs nothing.
+        local dry_run_out
+        dry_run_out=$(nix build /opt/cb1-autopipette#systemConfigs.default --dry-run 2>&1)
+        if echo "''${dry_run_out}" | grep -qE "will be (built|fetched)"; then
+          if [ "''${FORCE_ON_DEVICE_SWITCH:-}" = "1" ]; then
+            echo "WARNING: FORCE_ON_DEVICE_SWITCH=1 -- building/fetching on-device anyway."
+            echo "This is the exact path that has panicked nick's kernel before."
+          else
+            echo "Not primed yet." >&2
+            echo "From a WORKSTATION checkout of this repo, on the SAME NETWORK, run:" >&2
+            echo "    ./prime.sh <this machine's IP or hostname> tricca" >&2
+            echo "then run switch again -- it picks up from here." >&2
+            echo "Emergency-only bypass (this is the exact path that has" >&2
+            echo "panicked nick's kernel before -- see issue #22):" >&2
+            echo "    FORCE_ON_DEVICE_SWITCH=1 switch" >&2
+            return 1
+          fi
+        fi
+
         local logdir=/var/log/tricca-switch
         sudo mkdir -p "$logdir"
         sudo find "$logdir" -maxdepth 1 -name '*.log' -mtime +30 -delete
