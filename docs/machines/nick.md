@@ -1,16 +1,42 @@
 # nick
 
-**2026-09-08 update:** SD card replaced (new card benchmarks 12-15x better
-on sequential write) and ethernet now works for the first time ever
-(Armbian PR #10155's AC300-EPHY fix, needs kernel ≥6.18). But the same
-MMC `hung_task` panic that's dogged every switch attempt since generation
-8 recurred on the new card/kernel anyway, even with a cpufreq-governor
-mitigation applied — root cause still not confirmed. Full write-up:
-[docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](../incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md).
-Machine is currently down (last panic left it unresponsive; needs a
-physical power-cycle). Everything below predates this and is superseded
-where it conflicts (in particular: ethernet now works, so the "still on a
-mobile hotspot" line below is stale).
+**2026-09-08 — RUNNING for the first time since generation 8.** SD card
+replaced (12-15x faster sequential write), ethernet fixed for the first
+time ever (Armbian PR #10155, needs kernel ≥6.18), and — after the same
+MMC `hung_task` panic recurred on the new card/kernel anyway, even with a
+cpufreq-governor mitigation — switched successfully by priming the
+closure from a workstation (`./prime.sh 192.168.1.25 tricca`) instead of
+building on-device. Two primed switches both completed cleanly in under a
+minute each, no panic, no freeze. **All 7 services now `active`**
+(klipper-mcu needed a follow-up fix — see below). Full write-ups:
+[docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](../incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md)
+and the now-resolved
+[docs/incidents/nick-generation-8-upgrade.md](../incidents/nick-generation-8-upgrade.md).
+
+**The panic's root cause is still not understood** — priming is a proven
+workaround (avoids the on-device write volume that seems to trigger it),
+not a fix. **Until issue #22 is closed, always prime nick — never run
+`switch` directly on-device.** IP is now `192.168.1.25` on ethernet (not
+the old hotspot addresses below). Nick's own `switch` alias is live now
+(first successful generation activates it) but should not be used per the
+above.
+
+**klipper-mcu follow-up (2026-09-08):** crash-looped after the first
+switch (`sched_setscheduler: Operation not permitted`, kernel/cgroup
+setup doesn't allow realtime scheduling). Fixed by dropping the `-r` flag
+(`modules/klipper.nix`, PR #24) — the module's own comment had already
+named this exact contingency. Confirmed active after a second primed
+switch.
+
+**Not yet done post-bootstrap:** wifi (ethernet makes this optional now,
+but the RTL8189/systemd-networkd race documented in the 2026-09-08
+incident doc is still unaddressed if wifi is ever needed), MCU serial
+setup via Mainsail for the physical Manta M8P board (separate from the
+host `klipper-mcu` process fixed above), splash eyes-on verification, a
+real pipette run. Everything below predates this update and is
+superseded where it conflicts (in particular: ethernet now works, so the
+"still on a mobile hotspot" line is stale, and the IP addresses are
+outdated).
 
 Bootstrapped 2026-08-06. All 7 services green and running, but the running
 config is **stuck on system-manager generation 8 (built 2026-08-13)** —
