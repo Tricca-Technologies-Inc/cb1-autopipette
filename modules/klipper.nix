@@ -18,13 +18,17 @@ in
     systemd.services = {
       # Klipper host MCU: a second klipper process on the CB1 itself, exposing
       # the board's own GPIO at /tmp/klipper_host_mcu (printer.cfg: [mcu CB1]).
-      # Runs as root: -r requests realtime scheduling, and GPIO access needs
-      # it anyway. If it crash-loops on this kernel, drop the -r flag first.
+      # Runs as root for GPIO access. `-r` (realtime scheduling) crash-loops
+      # on nick's current kernel/cgroup setup with `Got error -1 in
+      # sched_setscheduler: (1)Operation not permitted` (confirmed
+      # 2026-09-08, kernel 6.18.43-current-sunxi64) -- dropped per this
+      # comment's own contingency plan. GPIO timing doesn't need realtime
+      # priority the way real hardware I/O would.
       klipper-mcu = {
         description = "Klipper host MCU (Linux process)";
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
-          ExecStart = "${klipperHostMcu}/klipper.elf -r";
+          ExecStart = "${klipperHostMcu}/klipper.elf";
           Restart = "always";
           RestartSec = 5;
         };
