@@ -43,7 +43,7 @@ echo "==> [3/6] service user"
 if ! id pipette >/dev/null 2>&1; then
   adduser --system --group --home /var/lib/autopipette --shell /usr/sbin/nologin pipette
 fi
-usermod -aG dialout,video,input,tty pipette   # serial for klipper; video/input/tty for X on tty1
+usermod -aG dialout,video,input,tty,render pipette   # serial for klipper; video/input/tty for X on tty1; render for GPU accel (panfrost renderD128)
 # moonraker.service (modules/klipper.nix) adds this as a SupplementaryGroup
 # on itself specifically -- not pipette generally -- so the PolicyKit rule
 # in moonraker.rules can grant reboot/shutdown/service-restart to just that
