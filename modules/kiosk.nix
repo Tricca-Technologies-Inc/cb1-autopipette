@@ -32,8 +32,25 @@ let
     /usr/bin/xset s noblank
     # NO xsetroot here: it would paint over the retained splash frame that
     # "-background none" preserves — the logo should survive until Chromium paints.
+    #
+    # No window manager runs here (deliberately minimal), so nothing answers
+    # the _NET_WM_STATE_FULLSCREEN request `--kiosk` relies on -- Chromium
+    # falls back to a ~10px-inset default window, leaving a border of the
+    # framebuffer console visible all around it (found on nick 2026-09-09,
+    # photo showed boot log text peeking above/left of the UI). Query the
+    # real screen size and force the window to it explicitly instead of
+    # depending on WM negotiation. ABSOLUTE paths: same nix-store-only PATH
+    # issue as the xset calls above.
+    screen_size="$(/usr/bin/xdpyinfo | /usr/bin/awk '/dimensions:/{print $2}')"
+    width="$(echo "$screen_size" | /usr/bin/cut -dx -f1)"
+    height="$(echo "$screen_size" | /usr/bin/cut -dx -f2)"
+    window_size_args=""
+    if [ -n "$width" ] && [ -n "$height" ]; then
+      window_size_args="--window-position=0,0 --window-size=$width,$height"
+    fi
     exec /usr/bin/chromium \
       --kiosk \
+      $window_size_args \
       --default-background-color=00000000 \
       --noerrdialogs \
       --disable-infobars \
