@@ -50,7 +50,8 @@ if ! REMOTE_REV=$(ssh ${NIX_SSHOPTS:-} "$SSH_USER@$HOST" \
 fi
 if [ "$LOCAL_REV" != "$REMOTE_REV" ]; then
   echo "    mismatch: workstation at ${LOCAL_REV:0:7}, $HOST at ${REMOTE_REV:0:7}." >&2
-  echo "    Get both onto the same commit (usually: git pull on each), then re-run." >&2
+  echo "    Get both onto the same commit, then re-run -- usually git pull here, and on" >&2
+  echo "    $HOST (repo is root-owned): sudo git -C /opt/cb1-autopipette pull" >&2
   exit 1
 fi
 echo "    both at ${LOCAL_REV:0:7}"
