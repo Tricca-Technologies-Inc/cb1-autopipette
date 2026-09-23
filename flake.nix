@@ -34,19 +34,37 @@
       # the CB1 itself (printer.cfg: [mcu CB1] serial=/tmp/klipper_host_mcu).
       # Built from the SAME pinned klipper source as klippy, so host-MCU and
       # klippy protocol versions can never mismatch.
-      klipperHostMcu = pkgs.klipper-firmware.override {
+      #
+      # nixpkgs' klipper-firmware sets dontFixup, so klipper.elf is never
+      # stripped: its debug info keeps the include paths of gcc, glibc-dev
+      # and linux-headers, pulling ~250 MiB of build toolchain into the
+      # runtime closure (issue #30). Strip it at the end of installPhase.
+      klipperHostMcu = (pkgs.klipper-firmware.override {
         mcu = "host";
         firmwareConfig = ./config/klipper-host-mcu.config;
-      };
+      }).overrideAttrs (old: {
+        installPhase = old.installPhase + ''
+          ''${STRIP:-strip} --strip-debug $out/klipper.elf
+        '';
+        disallowedReferences = [ pkgs.stdenv.cc.cc ];
+      });
       # Manta M8P V2.0 board firmware, built from the SAME pinned Klipper
       # source as klippy/klipperHostMcu -- keeps the physical board's
       # firmware from drifting out of sync with the host (see README field
       # notes: "MCU has deprecated code" means the board needs reflashing).
       # Flashing itself is still manual; this only produces the binary.
-      mantaFirmware = pkgs.klipper-firmware.override {
-        mcu = "manta-m8p-v2";
-        firmwareConfig = ./config/klipper-manta-mcu.config;
-      };
+      #
+      # Ships only klipper.bin (all flash-manta writes): the build's
+      # klipper.elf carries debug-info paths into gcc-arm-embedded, which
+      # dragged the whole ~1 GiB ARM toolchain onto every machine (#30).
+      mantaFirmware = pkgs.runCommand "klipper-firmware-manta-m8p-v2-bin" {
+        disallowedReferences = [ pkgs.gcc-arm-embedded ];
+      } ''
+        install -Dm444 ${pkgs.klipper-firmware.override {
+          mcu = "manta-m8p-v2";
+          firmwareConfig = ./config/klipper-manta-mcu.config;
+        }}/klipper.bin $out/klipper.bin
+      '';
       # `switch` invokes the system-manager CLI via `nix run`, which floats
       # to numtide/system-manager's latest commit unless pinned -- that CLI
       # can drift out of sync with the system-manager LIBRARY pinned below
