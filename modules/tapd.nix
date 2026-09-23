@@ -19,7 +19,10 @@ in
     systemd.services.tapd = {
       description = "Tricca AutoPipette control daemon";
       wantedBy = [ "multi-user.target" ];
-      after = [ "moonraker.service" "network.target" ];
+      after = [
+        "moonraker.service"
+        "network.target"
+      ];
       wants = [ "moonraker.service" ];
       preStart = ''
         mkdir -p /var/lib/autopipette/gcode

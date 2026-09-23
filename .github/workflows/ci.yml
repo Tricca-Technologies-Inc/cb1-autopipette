@@ -17,6 +17,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Nix hygiene (issue #6), separate from build correctness below. Tools come
+  # from this flake's own pinned nixpkgs (--inputs-from .), so a nixpkgs bump
+  # is the only thing that can change formatter output. Fix locally with:
+  #   nix shell --inputs-from . nixpkgs#nixfmt -c nixfmt $(git ls-files '*.nix')
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: nixfmt / statix / deadnix
+        run: |
+          nix shell --inputs-from . nixpkgs#nixfmt nixpkgs#statix nixpkgs#deadnix -c bash -euo pipefail -c '
+            nixfmt --check $(git ls-files "*.nix")
+            statix check .
+            deadnix --fail .
+          '
+
   flake-check:
     name: flake-check
     # Native aarch64 (free for public repos), matching the CB1 target -- no

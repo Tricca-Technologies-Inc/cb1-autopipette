@@ -22,8 +22,7 @@
 # persists it in /etc/NetworkManager/system-connections/:
 #   sudo nmcli device wifi connect "SSID" password "PASS" ifname wlan0
 
-{ ... }:
-{
+_: {
   config = {
     environment.etc = {
       # Driver is rtl8189fs — letter "l", not digit "1". Confirm on new

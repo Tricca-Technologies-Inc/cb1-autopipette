@@ -63,7 +63,10 @@ in
     systemd.services.moonraker = {
       description = "Moonraker API server for Klipper";
       wantedBy = [ "multi-user.target" ];
-      after = [ "klipper.service" "network.target" ];
+      after = [
+        "klipper.service"
+        "network.target"
+      ];
       wants = [ "klipper.service" ];
       # Moonraker's machine component shells out to `ip` for network info;
       # without this the journal fills with ShellCommandError tracebacks
@@ -73,7 +76,10 @@ in
       # nix-store-only PATH, so it silently no-oped ("cmp: command not
       # found") and the rules file was rewritten unconditionally on every
       # switch instead of only on change. Found live on nick 2026-08-07.
-      path = [ pkgs.iproute2 pkgs.diffutils ];
+      path = [
+        pkgs.iproute2
+        pkgs.diffutils
+      ];
       preStart = ''
         mkdir -p /var/lib/moonraker
         chown -R ${user} /var/lib/moonraker

@@ -19,7 +19,14 @@
     };
   };
 
-  outputs = { self, nixpkgs, system-manager, tricca-src, printer-cfgs, ... }:
+  outputs =
+    {
+      nixpkgs,
+      system-manager,
+      tricca-src,
+      printer-cfgs,
+      ...
+    }:
     let
       system = "aarch64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -144,7 +151,19 @@
           ./modules/nix-settings.nix
           ./modules/io-tuning.nix
         ];
-        specialArgs = { inherit tricca-autopipette triccaEnv tricca-src printer-cfgs klipperHostMcu mantaFirmware system-managerRev ioTuningApply switchHealthSampler; };
+        specialArgs = {
+          inherit
+            tricca-autopipette
+            triccaEnv
+            tricca-src
+            printer-cfgs
+            klipperHostMcu
+            mantaFirmware
+            system-managerRev
+            ioTuningApply
+            switchHealthSampler
+            ;
+        };
       };
 
       packages.${system} = {
