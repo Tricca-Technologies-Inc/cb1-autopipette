@@ -6,6 +6,11 @@ README. The README's Troubleshooting section links here for the full story
 behind any of its short gotchas; check here first if you hit something new
 that isn't in README at all.
 
+- [2026-09-23-marie-reinstall.md](2026-09-23-marie-reinstall.md) —
+  resolved. marie wiped and bootstrapped fresh. Found: every Armbian
+  switch exiting 1 on a tmpfiles rule (fixed, #32), firstrun-wizard wifi
+  vanishing at the first reboot, and /etc files left untracked by a failed
+  first switch.
 - [2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md) —
   **open.** SD card replaced (12-15x write improvement) and ethernet fixed
   (dead since day one), but the same MMC hung_task panic that's dogged

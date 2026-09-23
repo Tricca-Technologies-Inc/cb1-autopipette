@@ -170,6 +170,15 @@ match anything below.
   (including `flake.lock`) is the usual cause.
 - **A clean switch means "applied what it owns", not "machine matches repo".**
   Grep switch output for `WARN` — a skipped etc file is a warning, not an error.
+- **Wifi set up in Armbian's first-boot wizard disappears at the first
+  reboot after bootstrap.** The switch replaces the netplan file that held
+  it. Always run bootstrap's closing `nmcli device wifi connect` step, even
+  if wifi is working at that moment. See
+  [docs/incidents/2026-09-23-marie-reinstall.md](docs/incidents/2026-09-23-marie-reinstall.md).
+- **Many `Unmanaged path already exists` WARNs for our own /etc files
+  mean an earlier switch failed partway**, so system-manager never
+  recorded them and will keep skipping them. Save each link's target,
+  remove the links, switch again. Same incident doc for the exact steps.
 - **`sudo nix` fails; `sudo -i nix` works** (secure_path strips the Nix profile).
   The `switch` helper does this for you.
 - **`nix build` printing nothing means cached success**, not a hang:
