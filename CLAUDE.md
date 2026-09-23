@@ -59,9 +59,11 @@ built it doubles as design history, and README.md is the operator doc.
   --retain-splash) → sub-second white blink → kiosk. Do not reopen
   splash/flash work unless explicitly asked. See
   [ADR-0007](docs/adr/0007-boot-splash-white-blink-closed.md).
-- CI (`.github/workflows/ci.yml`) builds `systemConfigs.default` and
-  `packages.aarch64-linux.*` for real via QEMU emulation on a GitHub-hosted
-  runner, required on `main`. No self-hosted runner on marie. See
+- CI (`.github/workflows/ci.yml`) builds `systemConfigs.default` (whose
+  closure includes every `packages.aarch64-linux.*`) for real on a
+  GitHub-hosted native arm64 runner (`ubuntu-24.04-arm`; was QEMU on x86
+  until 2026-09-23). Required check on `main` is OFF since 2026-08-18 (runs
+  were too slow); re-enable once fast. No self-hosted runner on marie. See
   [ADR-0008](docs/adr/0008-ci-full-build-not-eval-only-no-self-hosted-runner.md).
 - `switch` builds `systemConfigs.default` on the machine itself, requiring
   that machine's own internet — fine on a good link, a real problem on

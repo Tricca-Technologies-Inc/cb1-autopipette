@@ -55,3 +55,30 @@ necessary-but-not-sufficient).
 - A build failure in CI (e.g. a broken `packages.aarch64-linux.mantaFirmware`
   derivation) blocks merge even though nothing has touched real hardware —
   this is the intended tradeoff, not a false positive to work around.
+
+## Update, 2026-09-23 — native arm64 runner instead of QEMU
+
+The QEMU half of this decision was the whole cost. Runs took 33–56 min
+(all 37 successful runs, 2026-08-12 to 2026-09-09), and in run 34408992658 the
+`nix build .#systemConfigs.default` step alone was 53.5 of 54 min: the
+system-manager Rust CLI (`system-manager-1.1.0`, not in any binary cache
+because this flake makes system-manager follow our nixpkgs) compiled from
+source under emulation for ~52 min, with the two Klipper firmware builds and
+tricca-autopipette alongside it. The ADR's "most of the closure substitutes"
+premise held; the leaves it didn't cover were the expensive part.
+
+CI now runs on GitHub's native `ubuntu-24.04-arm` runner (free for public
+repos; all three repos are public) and the QEMU step is gone. Everything
+else stands: full real build, not eval-only, and still no self-hosted
+runner on marie.
+
+Also corrected: this ADR and the workflow said `nix flake check` builds
+`packages.aarch64-linux.*`. It only evaluates them (0.3 min in the run
+above). They were still built every run, because all three packages
+(`default`, `mantaFirmware`, `tricca-autopipette`) are in
+`systemConfigs.default`'s closure, checked 2026-09-23.
+
+The "required on `main` from day one" part lapsed: `flake-check` was
+dropped from branch protection's required checks on 2026-08-18 because
+runs were too slow, and is still off. Re-enable once native runs prove
+fast.
