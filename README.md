@@ -95,7 +95,11 @@ that's switched in:
    (or plain `nix flake update` to pick up everything). Commit
    `flake.lock`, push, PR, merge to `main` — branch protection requires the
    CI build (`.github/workflows/ci.yml`) to pass first.
-2. **Prime first, always** — `switch` refuses to build or fetch on-device
+2. **On the machine**: `git pull` in `/opt/cb1-autopipette` (changes
+   nothing by itself — see CONTEXT.md's **Switch** entry). `prime.sh`
+   checks that the machine and workstation checkouts are at the same
+   commit, and refuses to push otherwise.
+3. **Prime, always** — `switch` refuses to build or fetch on-device
    by itself (see below for why) and will just print these same steps back
    at you if you skip this. From the same workstation checkout, same
    network as the machine (wifi or hotspot both work, doesn't need to be
@@ -104,7 +108,9 @@ that's switched in:
    ./prime.sh <machine-hostname-or-ip>
    ```
    Builds `systemConfigs.default` locally and pushes the closure straight
-   into the machine's Nix store over SSH. See
+   into the machine's Nix store over SSH, with a progress line (elapsed
+   time, MiB sent) if SSH key auth to the machine is set up
+   (`ssh-copy-id tricca@<machine>`); silent with password auth. See
    [ADR-0009](docs/adr/0009-prime-workstation-build-push.md) and
    CONTEXT.md's **Prime** entry.
 
@@ -118,9 +124,7 @@ that's switched in:
    for the `tricca` account) is set imperatively by `bootstrap.sh` on every
    machine now — nothing to set up by hand, unless priming a machine
    bootstrapped before 2026-09-08 (see `prime.sh`'s own error message if so).
-3. **On the machine**: `git pull` in `/opt/cb1-autopipette` (changes
-   nothing by itself — see CONTEXT.md's **Switch** entry), then `switch`.
-   It finds the primed build already in the store and just activates it —
+4. **On the machine**: `switch`. It finds the primed build already in the store and just activates it —
    fast, and doesn't build or fetch anything itself.
 
 `switch` (and `bootstrap.sh`'s own first-switch step) actively **refuse**
