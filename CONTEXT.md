@@ -35,17 +35,19 @@ in this repo.
 The single deploy operation: applying this repo's pinned flake to a machine
 via system-manager (the `switch` shell alias). The only way config changes
 take effect — `git pull` alone changes nothing on a machine until followed
-by `switch`. Switch always builds `systemConfigs.default` itself first; if
-the machine was **primed**, that build is a no-op (already in the store) —
-switch's meaning doesn't change either way, only its speed.
+by `switch`. Switch only activates: it refuses to run unless the machine
+was **primed** first (closure already in the store), since building or
+fetching on-device has panicked a CB1's kernel (issue #22).
+`FORCE_ON_DEVICE_SWITCH=1` is the emergency-only bypass.
 _Avoid_: deploy, apply, provision — "switch" is the actual command name.
 
 **Prime**:
-Optional step run from a WORKSTATION, before `switch`, for a machine whose
-own internet is too slow/unreliable to build+fetch on-device: builds
+Required step run from a WORKSTATION, after the machine's `git pull` and
+before every `switch` (and before `bootstrap.sh`'s first switch): builds
 `systemConfigs.default` on the workstation, then pushes the closure into the
 machine's Nix store over local-network SSH (`./prime.sh`, wifi or hotspot,
-not routed over the internet). Distinct from **Seed** (below) — priming
+not routed over the internet). Enforced by tooling since 2026-09-08 —
+`switch` and `bootstrap.sh` refuse to proceed unprimed. Distinct from **Seed** (below) — priming
 repeats every time there's something new to switch to; seeding is one-shot.
 See ADR-0009.
 _Avoid_: cache, sync — priming is a deliberate one-off push per update, not
