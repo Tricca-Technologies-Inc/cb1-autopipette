@@ -197,6 +197,14 @@ match anything below.
   `/dev/serial/by-id/usb-Klipper_*` and writes it into printer.cfg
   (machine-owned) instead. Check `dmesg | grep -i acm` and
   `/dev/serial/by-id/` against printer.cfg's `[mcu]` section if this recurs.
+- **After `switch`, Klipper stuck `shutdown` with "Lost communication with
+  MCU 'CB1'"** means the restart of `klipper-mcu.service` raced klippy's
+  live connection to it. This cascades into a real MCU shutdown too (the
+  Manta board), which `systemctl restart klipper` does **not** clear —
+  send `FIRMWARE_RESTART` instead (`curl -X POST
+  127.0.0.1:7125/printer/firmware_restart`, or from `tap`/Mainsail's
+  console). Full forensics:
+  [2026-09-24 incident](docs/incidents/2026-09-24-marie-switch-mcu-shutdown-cascade.md).
 - **`Error during activation: EOF while parsing a value at line 1 column 0`
   while "Reading etc file definitions" means a 0-byte manifest** (an
   interrupted build left a corrupt output), not a config error. Fix:

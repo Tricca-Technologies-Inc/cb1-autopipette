@@ -18,13 +18,18 @@ found along the way:
   `~/marie-backup-2026-09-23/` on the workstation.
 - **Manta firmware:** build from 2026-07-27. Klippy logs no "deprecated
   code" warning against the current host, so it hasn't been reflashed.
-- **Not yet deployed:** #33 (closure slimming, strips the host-MCU ELF) and
-  #34 (formatting, derivation-identical), both merged 2026-09-24. Next
-  switch: `git pull`, `./prime.sh <ip>`, `switch`, then confirm
-  `klipper-mcu` is active and Klipper reports `ready`.
-- **Not yet verified:** splash eyes-on, Ctrl+Alt+F2 → `tap`, a real run.
-  Pipette hardware still not installed, so `home_all`'s plunger homing
-  can't succeed yet. The Z-axis homing issue is James's.
+- **2026-09-24 — #33 + #34 deployed.** `git pull` (no-op, already at
+  `d5de11b`), `./prime.sh 10.241.253.17 tricca`, `switch`. Clean, no `WARN`.
+  Post-switch Klipper came up `shutdown` ("Lost communication with MCU
+  'CB1'"), cascading into a real-MCU shutdown latch that `systemctl
+  restart klipper` didn't clear — needed `FIRMWARE_RESTART` explicitly.
+  Full forensics:
+  [docs/incidents/2026-09-24-marie-switch-mcu-shutdown-cascade.md](../incidents/2026-09-24-marie-switch-mcu-shutdown-cascade.md).
+  After that: all 7 services active, Klipper `ready`. Splash eyes-on
+  confirmed good by James.
+- **Not yet verified:** Ctrl+Alt+F2 → `tap`, a real run. Pipette hardware
+  still not installed, so `home_all`'s plunger homing can't succeed yet.
+  The Z-axis homing issue is James's.
 
 ## Storage (issue #19)
 

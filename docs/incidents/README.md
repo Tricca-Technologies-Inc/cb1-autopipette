@@ -6,6 +6,11 @@ README. The README's Troubleshooting section links here for the full story
 behind any of its short gotchas; check here first if you hit something new
 that isn't in README at all.
 
+- [2026-09-24-marie-switch-mcu-shutdown-cascade.md](2026-09-24-marie-switch-mcu-shutdown-cascade.md) —
+  resolved, recovery is one command. `switch` restarting `klipper-mcu.service`
+  raced klippy's live connection to it, dropping CB1 (the host virtual MCU);
+  Klipper's shutdown then cascaded to the real Manta MCU too, which only
+  `FIRMWARE_RESTART` (not `systemctl restart klipper`) clears.
 - [2026-09-23-marie-reinstall.md](2026-09-23-marie-reinstall.md) —
   resolved. marie wiped and bootstrapped fresh. Found: every Armbian
   switch exiting 1 on a tmpfiles rule (fixed, #32), firstrun-wizard wifi
