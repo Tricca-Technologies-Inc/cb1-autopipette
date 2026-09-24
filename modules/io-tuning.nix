@@ -24,7 +24,11 @@
     systemd.services.io-tuning = {
       description = "Dirty-page/ext4-commit tuning (SD-card I/O collapse mitigation)";
       wantedBy = [ "multi-user.target" ];
-      before = [ "klipper.service" "moonraker.service" "tapd.service" ];
+      before = [
+        "klipper.service"
+        "moonraker.service"
+        "tapd.service"
+      ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;

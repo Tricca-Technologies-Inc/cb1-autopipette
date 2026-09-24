@@ -107,7 +107,10 @@ in
       # default target is multi-user, so a graphical.target hook never fires
       # and the kiosk sits "inactive (dead)" forever.
       wantedBy = [ "multi-user.target" ];
-      after = [ "autopipette.service" "systemd-user-sessions.service" ];
+      after = [
+        "autopipette.service"
+        "systemd-user-sessions.service"
+      ];
       wants = [ "autopipette.service" ];
       conflicts = [ "getty@tty1.service" ];
       # Chromium's own apt-shipped /etc/chromium.d/dev-shm hook shells out to

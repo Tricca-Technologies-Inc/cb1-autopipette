@@ -9,7 +9,12 @@
 #                                     seeded from the pinned configs repo on first boot
 #   /var/lib/moonraker/             — moonraker data dir (see modules/moonraker.nix)
 
-{ pkgs, printer-cfgs, klipperHostMcu, ... }:
+{
+  pkgs,
+  printer-cfgs,
+  klipperHostMcu,
+  ...
+}:
 let
   user = "pipette"; # created in bootstrap.sh; member of dialout for /dev/serial
 in
@@ -37,7 +42,10 @@ in
       klipper = {
         description = "Klipper 3D printer firmware host";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network.target" "klipper-mcu.service" ];
+        after = [
+          "network.target"
+          "klipper-mcu.service"
+        ];
         wants = [ "klipper-mcu.service" ];
         preStart = ''
           # printer.cfg lives in MOONRAKER's config dir — Mainsail's config

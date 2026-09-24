@@ -102,6 +102,8 @@ built it doubles as design history, and README.md is the operator doc.
   just activates it. See ADR-0009 (2026-09-08 update: this is enforced by
   tooling now, not just recommended for slow links). Proven on `nick`
   2026-09-08, twice, clean both times.
+- Format/lint (CI `lint` job enforces it): `nix shell --inputs-from . nixpkgs#nixfmt -c nixfmt $(git ls-files '*.nix')`;
+  `statix check .` and `deadnix --fail .` the same way. Config: `statix.toml`.
 - Update pins: on a WORKSTATION only — `nix flake update [tricca-src|printer-cfgs|system-manager]`,
   commit flake.lock, PR (main's branch protection requires the `flake-check`
   CI build to pass before any update lands, direct push included — see

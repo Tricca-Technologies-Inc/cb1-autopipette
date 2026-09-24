@@ -7,9 +7,10 @@
 #   nix build .#tricca-autopipette --system aarch64-linux
 #   nix copy --to ssh://cb1 ./result
 
-{ lib
-, python3Packages
-, src  # passed from flake input tricca-src, pinned via flake.lock
+{
+  lib,
+  python3Packages,
+  src, # passed from flake input tricca-src, pinned via flake.lock
 }:
 
 python3Packages.buildPythonPackage {
@@ -31,8 +32,8 @@ python3Packages.buildPythonPackage {
     aiohttp
     cmd2
     fastapi
-    opencv4      # nixpkgs name for the cv2 binding (opencv-python on PyPI)
-    pydantic     # v2 in current nixpkgs, satisfies pydantic>=2
+    opencv4 # nixpkgs name for the cv2 binding (opencv-python on PyPI)
+    pydantic # v2 in current nixpkgs, satisfies pydantic>=2
     requests
     uvicorn
     websockets

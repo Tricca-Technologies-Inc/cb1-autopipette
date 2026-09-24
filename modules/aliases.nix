@@ -1,7 +1,14 @@
 # Shell helpers on every machine, managed by Nix (not bootstrap) so the
 # whole fleet gets updates via `switch`. Sourced by login shells from
 # /etc/profile.d/. Functions rather than aliases so they can take arguments.
-{ pkgs, mantaFirmware, system-managerRev, ioTuningApply, switchHealthSampler, ... }:
+{
+  pkgs,
+  mantaFirmware,
+  system-managerRev,
+  ioTuningApply,
+  switchHealthSampler,
+  ...
+}:
 let
   # flashtool.py (vendored in Klipper's own source) can trigger the board's
   # built-in "jump to bootloader" request over the currently-running Klipper

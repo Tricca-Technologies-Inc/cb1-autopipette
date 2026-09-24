@@ -1,0 +1,5 @@
+# statix config (CI's lint job: .github/workflows/ci.yml).
+# repeated_keys: this repo deliberately writes one dotted path per setting
+# (nix.settings.min-free = ...; nix.settings.max-free = ...;) so each line
+# can carry its own comment -- nesting them into one attrset reads worse.
+disabled = [ "repeated_keys" ]
