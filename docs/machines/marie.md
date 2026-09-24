@@ -25,11 +25,13 @@ found along the way:
   restart klipper` didn't clear — needed `FIRMWARE_RESTART` explicitly.
   Full forensics:
   [docs/incidents/2026-09-24-marie-switch-mcu-shutdown-cascade.md](../incidents/2026-09-24-marie-switch-mcu-shutdown-cascade.md).
-  After that: all 7 services active, Klipper `ready`. Splash eyes-on
-  confirmed good by James.
-- **Not yet verified:** Ctrl+Alt+F2 → `tap`, a real run. Pipette hardware
-  still not installed, so `home_all`'s plunger homing can't succeed yet.
-  The Z-axis homing issue is James's.
+  After that: all 7 services active, Klipper `ready`. Splash eyes-on and
+  Ctrl+Alt+F2 → `tap` both confirmed good by James.
+- **Not being used for pipette hardware / gantry movement testing for a
+  while** (James's call, 2026-09-24) — no real-run verification expected
+  in the near term. Pipette hardware still not installed anyway, so
+  `home_all`'s plunger homing can't succeed yet; the Z-axis homing issue
+  is James's.
 
 ## Storage (issue #19)
 
