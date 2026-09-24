@@ -9,7 +9,12 @@ let
   # On marie this board turned out to use the STM32 ROM DFU (0483:df11), NOT
   # Katapult, so flashing itself goes through dfu-util once the jump lands.
   flashPython = pkgs.python3.withPackages (ps: [ ps.pyserial ]);
-  flashtool = "${pkgs.klipper.src}/lib/katapult/flashtool.py";
+  # Copied out on its own: interpolating a path inside klipper.src would
+  # put the whole ~213 MiB source tree in the runtime closure (#30).
+  # flashtool.py imports only the standard library (+ pyserial).
+  flashtool = pkgs.runCommand "katapult-flashtool.py" { } ''
+    install -Dm555 ${pkgs.klipper.src}/lib/katapult/flashtool.py $out
+  '';
 in
 {
   config = {
