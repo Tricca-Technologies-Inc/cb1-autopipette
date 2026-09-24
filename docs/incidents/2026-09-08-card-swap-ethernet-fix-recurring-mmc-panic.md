@@ -1,6 +1,10 @@
 # 2026-09-08 — SD card swap, ethernet driver fix, and a recurring MMC hung_task panic (nick)
 
-**Status: open.** Two real problems got fixed this session (bad SD card,
+**Status: closed 2026-09-24, root cause never found.** Priming (ADR-0009)
+avoids the panic and is now enforced permanently; issue #22 was closed
+without further investigation. Original status below.
+
+Two real problems got fixed this session (bad SD card,
 dead ethernet). A third — the actual freeze/panic that's dogged every
 `switch` attempt since generation 8 — reproduced again on the new card,
 new kernel, with a mitigation applied, so it survives this session's fixes.

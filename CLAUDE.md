@@ -69,11 +69,11 @@ built it doubles as design history, and README.md is the operator doc.
   that machine's own internet — fine on a good link, a real problem on
   wifi/hotspot-only lab machines, and (found 2026-09-08) a machine that has
   to build/fetch a real chunk of closure on-device risks a kernel panic
-  outright (`hung_task`/`mmc_rescan`, root cause still unconfirmed, issue
-  #22) regardless of link quality. `prime.sh` (workstation-side) builds the
+  outright (`hung_task`/`mmc_rescan`; root cause never found, issue #22
+  closed 2026-09-24) regardless of link quality. `prime.sh` (workstation-side) builds the
   closure elsewhere and pushes it over local-network SSH instead, so
-  `switch` only ever activates an already-primed closure. **This is now
-  enforced, not optional**: `switch` and `bootstrap.sh`'s first switch both
+  `switch` only ever activates an already-primed closure. **This is
+  enforced permanently, not optional**: `switch` and `bootstrap.sh`'s first switch both
   refuse to proceed unless the closure is already primed (escape hatch:
   `FORCE_ON_DEVICE_SWITCH=1`, expect the same panic risk).
   `modules/nix-settings.nix` grants the trust that push needs

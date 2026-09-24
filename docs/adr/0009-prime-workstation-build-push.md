@@ -59,8 +59,8 @@ volume to near zero — avoided it both times it was tried. Root cause is
 still unconfirmed (issue #22); this is a proven workaround, not a fix.
 
 Consequence: priming is no longer "recommended for slow links," it's
-**enforced by the tooling itself**, on every machine, until #22 is
-resolved. Both `switch` (`modules/aliases.nix`) and `bootstrap.sh`'s first
+**enforced by the tooling itself**, on every machine. (#22 was closed
+2026-09-24 without finding the root cause, so this is permanent.) Both `switch` (`modules/aliases.nix`) and `bootstrap.sh`'s first
 switch now gate on `nix build --dry-run` reporting nothing left to build
 or fetch, and refuse (with instructions) if that's not the case. An
 explicit `FORCE_ON_DEVICE_SWITCH=1` env var bypasses the gate for a

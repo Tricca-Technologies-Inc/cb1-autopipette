@@ -23,7 +23,8 @@ whatever's wrong is provoked by the *volume* of on-device writes a normal
 first keeps that volume small enough to never trigger it, every time
 tried so far (n=2). **Recommended going forward: always prime nick,
 never `switch` directly on-device, until the underlying cause is actually
-understood** (tracked in issue #22).
+understood** (issue #22, closed 2026-09-24 without a root cause;
+priming is now enforced permanently).
 
 Everything below is the historical attempt-by-attempt record that led
 here — kept for the mitigations it validated (dirty-page tuning, detached
@@ -497,7 +498,7 @@ Also established while measuring, both correcting earlier assumptions:
   2026-09-03/2026-09-08 (issue #18, closed) and ethernet fixed
   2026-09-08, but the panic itself recurred even on the new hardware —
   what actually got nick running was priming, not the card/ethernet
-  fixes. Root cause of the panic is still open, tracked as issue #22.
+  fixes. Root cause of the panic was never found; issue #22 closed 2026-09-24.
 - ~~Replace nick's SD card~~ — done 2026-09-08 (issue #18, closed).
 - **Sampler logging doesn't survive a freeze** (found in attempt 10):
   `/var/log` is zram-backed and wiped by a hard power-cycle before

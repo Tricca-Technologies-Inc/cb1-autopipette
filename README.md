@@ -133,8 +133,8 @@ building/fetching on-device — an on-device build/fetch of this size has
 repeatedly panicked a CB1's kernel under real write load, even on healthy
 hardware (see
 [docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](docs/incidents/2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md)
-and issue #22 — root cause still unconfirmed, priming is a proven
-workaround, not a fix). There's a genuine-emergency-only bypass,
+and issue #22, closed 2026-09-24 without a root cause — priming is the
+permanent answer, not a stopgap). There's a genuine-emergency-only bypass,
 `FORCE_ON_DEVICE_SWITCH=1 switch`, that does exactly what `switch` used to
 do unconditionally — expect it to risk the same panic.
 

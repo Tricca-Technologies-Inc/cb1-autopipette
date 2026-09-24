@@ -12,12 +12,12 @@ that isn't in README at all.
   vanishing at the first reboot, and /etc files left untracked by a failed
   first switch.
 - [2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md](2026-09-08-card-swap-ethernet-fix-recurring-mmc-panic.md) —
-  **open.** SD card replaced (12-15x write improvement) and ethernet fixed
+  closed 2026-09-24, root cause never found. SD card replaced (12-15x write improvement) and ethernet fixed
   (dead since day one), but the same MMC hung_task panic that's dogged
   nick since generation 8 recurred anyway, on new hardware, with a
-  cpufreq-governor mitigation applied. Root cause still not confirmed.
-- [nick-generation-8-upgrade.md](nick-generation-8-upgrade.md) — **open.**
-  Nick stuck on system-manager generation 8 since 2026-08-13; ten switch
+  cpufreq-governor mitigation applied. Priming avoids it and is enforced permanently (ADR-0009).
+- [nick-generation-8-upgrade.md](nick-generation-8-upgrade.md) — resolved
+  2026-09-08 by priming. Nick was stuck on system-manager generation 8 from 2026-08-13; ten switch
   attempts across five sessions, the mitigation stack that's worked so far,
   and what's still unresolved.
 - [2026-07-30-oom-corruption-kernel-panic.md](2026-07-30-oom-corruption-kernel-panic.md) —
