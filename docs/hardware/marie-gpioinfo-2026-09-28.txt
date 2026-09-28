@@ -1,0 +1,348 @@
+marie, 2026-09-28, at repo commit d5de11b (before this pass's libgpiod
+addition to modules/base.nix -- `gpiod`/`libgpiod3` 2.2.1-2+deb13u1 were
+already present via a manual `apt-get install` predating this repo's
+declarative management, per `apt-mark showmanual`).
+
+$ cat /boot/armbianEnv.txt
+verbosity=1
+bootlogo=true
+console=serial
+disp_mode=1920x1080p60
+overlay_prefix=sun50i-h616
+fdtfile=sun50i-h616-bigtreetech-cb1-sd.dtb
+rootdev=UUID=50fbe113-a383-4d6f-bd89-e6456ad52bdb
+rootfstype=ext4
+extraargs=quiet loglevel=0
+usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u
+
+No `overlays=` line present at all -- the default board dtb
+(sun50i-h616-bigtreetech-cb1-sd.dtb) is loaded with no additional overlay
+toggling any header pins.
+
+$ sudo gpiodetect
+gpiochip0 [300b000.pinctrl] (288 lines)
+gpiochip1 [7022000.pinctrl] (32 lines)
+
+$ sudo gpioinfo
+gpiochip0 - 288 lines:
+	line   0:	unnamed         	input consumer=kernel
+	line   1:	unnamed         	input consumer=kernel
+	line   2:	unnamed         	input consumer=kernel
+	line   3:	unnamed         	input consumer=kernel
+	line   4:	unnamed         	input consumer=kernel
+	line   5:	unnamed         	input consumer=kernel
+	line   6:	unnamed         	input consumer=kernel
+	line   7:	unnamed         	input consumer=kernel
+	line   8:	unnamed         	input consumer=kernel
+	line   9:	unnamed         	input consumer=kernel
+	line  10:	unnamed         	input
+	line  11:	unnamed         	input
+	line  12:	unnamed         	input consumer=kernel
+	line  13:	unnamed         	input
+	line  14:	unnamed         	input
+	line  15:	unnamed         	input
+	line  16:	unnamed         	input
+	line  17:	unnamed         	input
+	line  18:	unnamed         	input
+	line  19:	unnamed         	input
+	line  20:	unnamed         	input
+	line  21:	unnamed         	input
+	line  22:	unnamed         	input
+	line  23:	unnamed         	input
+	line  24:	unnamed         	input
+	line  25:	unnamed         	input
+	line  26:	unnamed         	input
+	line  27:	unnamed         	input
+	line  28:	unnamed         	input
+	line  29:	unnamed         	input
+	line  30:	unnamed         	input
+	line  31:	unnamed         	input
+	line  32:	unnamed         	input
+	line  33:	unnamed         	input
+	line  34:	unnamed         	input
+	line  35:	unnamed         	input
+	line  36:	unnamed         	input
+	line  37:	unnamed         	input
+	line  38:	unnamed         	input
+	line  39:	unnamed         	input
+	line  40:	unnamed         	input
+	line  41:	unnamed         	input
+	line  42:	unnamed         	input
+	line  43:	unnamed         	input
+	line  44:	unnamed         	input
+	line  45:	unnamed         	input
+	line  46:	unnamed         	input
+	line  47:	unnamed         	input
+	line  48:	unnamed         	input
+	line  49:	unnamed         	input
+	line  50:	unnamed         	input
+	line  51:	unnamed         	input
+	line  52:	unnamed         	input
+	line  53:	unnamed         	input
+	line  54:	unnamed         	input
+	line  55:	unnamed         	input
+	line  56:	unnamed         	input
+	line  57:	unnamed         	input
+	line  58:	unnamed         	input
+	line  59:	unnamed         	input
+	line  60:	unnamed         	input
+	line  61:	unnamed         	input
+	line  62:	unnamed         	input
+	line  63:	unnamed         	input
+	line  64:	unnamed         	input
+	line  65:	unnamed         	input
+	line  66:	unnamed         	input
+	line  67:	unnamed         	input
+	line  68:	unnamed         	input
+	line  69:	unnamed         	input
+	line  70:	unnamed         	input
+	line  71:	unnamed         	input
+	line  72:	unnamed         	input
+	line  73:	unnamed         	input
+	line  74:	unnamed         	input
+	line  75:	unnamed         	input
+	line  76:	unnamed         	input
+	line  77:	unnamed         	input
+	line  78:	unnamed         	input
+	line  79:	unnamed         	input
+	line  80:	unnamed         	input
+	line  81:	unnamed         	input
+	line  82:	unnamed         	input
+	line  83:	unnamed         	input
+	line  84:	unnamed         	input
+	line  85:	unnamed         	input
+	line  86:	unnamed         	input
+	line  87:	unnamed         	input
+	line  88:	unnamed         	input
+	line  89:	unnamed         	input
+	line  90:	unnamed         	input
+	line  91:	unnamed         	input
+	line  92:	unnamed         	input
+	line  93:	unnamed         	input
+	line  94:	unnamed         	input
+	line  95:	unnamed         	input
+	line  96:	unnamed         	input
+	line  97:	unnamed         	input
+	line  98:	unnamed         	input
+	line  99:	unnamed         	input
+	line 100:	unnamed         	input
+	line 101:	unnamed         	input
+	line 102:	unnamed         	input
+	line 103:	unnamed         	input
+	line 104:	unnamed         	input
+	line 105:	unnamed         	input
+	line 106:	unnamed         	input
+	line 107:	unnamed         	input
+	line 108:	unnamed         	input
+	line 109:	unnamed         	input
+	line 110:	unnamed         	input
+	line 111:	unnamed         	input
+	line 112:	unnamed         	input
+	line 113:	unnamed         	input
+	line 114:	unnamed         	input
+	line 115:	unnamed         	input
+	line 116:	unnamed         	input
+	line 117:	unnamed         	input
+	line 118:	unnamed         	input
+	line 119:	unnamed         	input
+	line 120:	unnamed         	input
+	line 121:	unnamed         	input
+	line 122:	unnamed         	input
+	line 123:	unnamed         	input
+	line 124:	unnamed         	input
+	line 125:	unnamed         	input
+	line 126:	unnamed         	input
+	line 127:	unnamed         	input
+	line 128:	unnamed         	input
+	line 129:	unnamed         	input
+	line 130:	unnamed         	input
+	line 131:	unnamed         	input
+	line 132:	unnamed         	input
+	line 133:	unnamed         	input
+	line 134:	unnamed         	input
+	line 135:	unnamed         	input
+	line 136:	unnamed         	input
+	line 137:	unnamed         	input
+	line 138:	unnamed         	input
+	line 139:	unnamed         	input
+	line 140:	unnamed         	input
+	line 141:	unnamed         	input
+	line 142:	unnamed         	input
+	line 143:	unnamed         	input
+	line 144:	unnamed         	input
+	line 145:	unnamed         	input
+	line 146:	unnamed         	input
+	line 147:	unnamed         	input
+	line 148:	unnamed         	input
+	line 149:	unnamed         	input
+	line 150:	unnamed         	input
+	line 151:	unnamed         	input
+	line 152:	unnamed         	input
+	line 153:	unnamed         	input
+	line 154:	unnamed         	input
+	line 155:	unnamed         	input
+	line 156:	unnamed         	input
+	line 157:	unnamed         	input
+	line 158:	unnamed         	input
+	line 159:	unnamed         	input
+	line 160:	unnamed         	input consumer=kernel
+	line 161:	unnamed         	input consumer=kernel
+	line 162:	unnamed         	input consumer=kernel
+	line 163:	unnamed         	input consumer=kernel
+	line 164:	unnamed         	input consumer=kernel
+	line 165:	unnamed         	input consumer=kernel
+	line 166:	unnamed         	input
+	line 167:	unnamed         	input
+	line 168:	unnamed         	input
+	line 169:	unnamed         	input
+	line 170:	unnamed         	input
+	line 171:	unnamed         	input
+	line 172:	unnamed         	input
+	line 173:	unnamed         	input
+	line 174:	unnamed         	input
+	line 175:	unnamed         	input
+	line 176:	unnamed         	input
+	line 177:	unnamed         	input
+	line 178:	unnamed         	input
+	line 179:	unnamed         	input
+	line 180:	unnamed         	input
+	line 181:	unnamed         	input
+	line 182:	unnamed         	input
+	line 183:	unnamed         	input
+	line 184:	unnamed         	input
+	line 185:	unnamed         	input
+	line 186:	unnamed         	input
+	line 187:	unnamed         	input
+	line 188:	unnamed         	input
+	line 189:	unnamed         	input
+	line 190:	unnamed         	input
+	line 191:	unnamed         	input
+	line 192:	unnamed         	input consumer=kernel
+	line 193:	unnamed         	input consumer=kernel
+	line 194:	unnamed         	input consumer=kernel
+	line 195:	unnamed         	input consumer=kernel
+	line 196:	unnamed         	input consumer=kernel
+	line 197:	unnamed         	input consumer=kernel
+	line 198:	unnamed         	input
+	line 199:	unnamed         	input
+	line 200:	unnamed         	input
+	line 201:	unnamed         	input
+	line 202:	unnamed         	input
+	line 203:	unnamed         	input
+	line 204:	unnamed         	input
+	line 205:	unnamed         	input
+	line 206:	unnamed         	input
+	line 207:	unnamed         	input
+	line 208:	unnamed         	input
+	line 209:	unnamed         	input
+	line 210:	unnamed         	output active-low consumer=reset
+	line 211:	unnamed         	input
+	line 212:	unnamed         	input
+	line 213:	unnamed         	input
+	line 214:	unnamed         	input
+	line 215:	unnamed         	input
+	line 216:	unnamed         	input
+	line 217:	unnamed         	input
+	line 218:	unnamed         	input
+	line 219:	unnamed         	input
+	line 220:	unnamed         	input
+	line 221:	unnamed         	input
+	line 222:	unnamed         	input
+	line 223:	unnamed         	input
+	line 224:	unnamed         	input consumer=kernel
+	line 225:	unnamed         	input consumer=kernel
+	line 226:	unnamed         	input
+	line 227:	unnamed         	input
+	line 228:	unnamed         	input
+	line 229:	unnamed         	output active-low consumer=led-0
+	line 230:	unnamed         	input
+	line 231:	unnamed         	input
+	line 232:	unnamed         	input
+	line 233:	unnamed         	input
+	line 234:	unnamed         	input
+	line 235:	unnamed         	input
+	line 236:	unnamed         	input
+	line 237:	unnamed         	input
+	line 238:	unnamed         	input
+	line 239:	unnamed         	input
+	line 240:	unnamed         	input
+	line 241:	unnamed         	input
+	line 242:	unnamed         	input
+	line 243:	unnamed         	input
+	line 244:	unnamed         	input
+	line 245:	unnamed         	input
+	line 246:	unnamed         	input
+	line 247:	unnamed         	input
+	line 248:	unnamed         	input
+	line 249:	unnamed         	input
+	line 250:	unnamed         	input
+	line 251:	unnamed         	input
+	line 252:	unnamed         	input
+	line 253:	unnamed         	input
+	line 254:	unnamed         	input
+	line 255:	unnamed         	input
+	line 256:	unnamed         	input
+	line 257:	unnamed         	input
+	line 258:	unnamed         	input
+	line 259:	unnamed         	input
+	line 260:	unnamed         	input
+	line 261:	unnamed         	input
+	line 262:	unnamed         	input
+	line 263:	unnamed         	input
+	line 264:	unnamed         	input
+	line 265:	unnamed         	input
+	line 266:	unnamed         	input
+	line 267:	unnamed         	input
+	line 268:	unnamed         	input
+	line 269:	unnamed         	input
+	line 270:	unnamed         	input
+	line 271:	unnamed         	input
+	line 272:	unnamed         	input
+	line 273:	unnamed         	input
+	line 274:	unnamed         	input
+	line 275:	unnamed         	input
+	line 276:	unnamed         	input
+	line 277:	unnamed         	input
+	line 278:	unnamed         	input
+	line 279:	unnamed         	input
+	line 280:	unnamed         	input
+	line 281:	unnamed         	input
+	line 282:	unnamed         	input
+	line 283:	unnamed         	input
+	line 284:	unnamed         	input
+	line 285:	unnamed         	input
+	line 286:	unnamed         	input
+	line 287:	unnamed         	input
+gpiochip1 - 32 lines:
+	line   0:	unnamed         	input consumer=kernel
+	line   1:	unnamed         	input consumer=kernel
+	line   2:	unnamed         	input
+	line   3:	unnamed         	input
+	line   4:	unnamed         	input
+	line   5:	unnamed         	input
+	line   6:	unnamed         	input
+	line   7:	unnamed         	input
+	line   8:	unnamed         	input
+	line   9:	unnamed         	input
+	line  10:	unnamed         	input
+	line  11:	unnamed         	input
+	line  12:	unnamed         	input
+	line  13:	unnamed         	input
+	line  14:	unnamed         	input
+	line  15:	unnamed         	input
+	line  16:	unnamed         	input
+	line  17:	unnamed         	input
+	line  18:	unnamed         	input
+	line  19:	unnamed         	input
+	line  20:	unnamed         	input
+	line  21:	unnamed         	input
+	line  22:	unnamed         	input
+	line  23:	unnamed         	input
+	line  24:	unnamed         	input
+	line  25:	unnamed         	input
+	line  26:	unnamed         	input
+	line  27:	unnamed         	input
+	line  28:	unnamed         	input
+	line  29:	unnamed         	input
+	line  30:	unnamed         	input
+	line  31:	unnamed         	input

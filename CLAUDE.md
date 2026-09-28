@@ -81,6 +81,12 @@ built it doubles as design history, and README.md is the operator doc.
   installing Nix, since priming has to work *before* any switch has ever
   activated the declarative version. See
   [ADR-0009](docs/adr/0009-prime-workstation-build-push.md).
+- CB1 GPIO header pins (Manta M8P V2.0 expansion connector) are referenced
+  by Klipper as `gpiochip<n>/gpio<o>` (`gpiodetect`/`gpioinfo` from
+  `libgpiod`, `modules/base.nix`), discovered by hand per board+SoC class,
+  not from any published BTT pin table (none exists). Mapping lives in
+  [docs/hardware/cb1-gpio-pinout.md](docs/hardware/cb1-gpio-pinout.md). See
+  [ADR-0010](docs/adr/0010-cb1-gpio-pins-identified-via-gpiod-not-fixed-numbering.md).
 
 ## Commands
 
