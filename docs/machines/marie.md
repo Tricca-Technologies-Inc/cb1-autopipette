@@ -8,7 +8,11 @@ found along the way:
 
 - **Network:** wifi only, NetworkManager profile for the phone hotspot
   `JamesPhoneNet`. DHCP address changes (was `.16`, then `.17` on
-  10.241.253.0/24). SSH key auth from the workstation is set up.
+  10.241.253.0/24; as of 2026-09-28, `10.190.204.16` -- same LAN as the
+  `yogurt` workstation, a different network than the JamesPhoneNet
+  hotspot above, so it moves networks entirely rather than just IP within
+  one). SSH key auth from the workstation is set up, but password auth
+  (`tricca`) also worked this session.
 - **Verified after reboot:** all 7 services active, Klipper `ready`,
   splash config in place (`tricca` theme, `bootlogo=true`,
   `console=serial`), no PATH-gap errors, wifi reconnects on boot.
@@ -32,6 +36,15 @@ found along the way:
   in the near term. Pipette hardware still not installed anyway, so
   `home_all`'s plunger homing can't succeed yet; the Z-axis homing issue
   is James's.
+- **2026-09-28 — read-only GPIO discovery pass** (no gantry/motion
+  involved, does not touch the pause above): confirmed gpiochip/line
+  layout and no active device-tree overlay. `gpiod`/`libgpiod3` were
+  already present via a pre-existing manual `apt-get install`, not yet
+  from this repo's `libgpiod` addition (`modules/base.nix`, not switched
+  onto marie yet as of this pass). Full findings:
+  [docs/hardware/cb1-gpio-pinout.md](../hardware/cb1-gpio-pinout.md).
+  Header-pin-to-line mapping still needs an in-person silkscreen/schematic
+  cross-reference — [issue #36](https://github.com/Tricca-Technologies-Inc/cb1-autopipette/issues/36).
 
 ## Storage (issue #19)
 
