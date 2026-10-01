@@ -13,6 +13,9 @@
   src, # passed from flake input tricca-src, pinned via flake.lock
 }:
 
+let
+  cmd2-4 = python3Packages.callPackage ./cmd2.nix { };
+in
 python3Packages.buildPythonPackage {
   pname = "tricca-autopipette";
   version = "0.2.0";
@@ -24,7 +27,7 @@ python3Packages.buildPythonPackage {
 
   dependencies = with python3Packages; [
     aiohttp
-    cmd2
+    cmd2-4
     fastapi
     pydantic # v2 in current nixpkgs, satisfies pydantic>=2
     uvicorn
