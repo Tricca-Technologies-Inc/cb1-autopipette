@@ -47,7 +47,7 @@ jobs:
     # QEMU emulation. Under emulation on ubuntu-latest, compiling the
     # system-manager Rust CLI alone took ~52 min of a ~54 min run
     # (2026-09-09); see ADR-0008's 2026-09-23 update.
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
 
