@@ -5,6 +5,11 @@
 #     --host 0.0.0.0 --port 8000 --app-dir .../autopipette_kiosk &
 # The trailing `&` meant nothing supervised the process; systemd now restarts
 # it on crash and orders it in the boot chain.
+#
+# --host 127.0.0.1: no auth on this API at all (unauthenticated POST
+# /run or /home moves the gantry and drives the syringe). Kiosk browser
+# is the only client and it's on-box (modules/kiosk.nix hits
+# 127.0.0.1:8000). See Tricca_AutoPipette ADR-0002 and issue #32.
 { triccaEnv, tricca-src, ... }:
 let
   user = "pipette";
@@ -35,7 +40,7 @@ in
       serviceConfig = {
         User = user;
         Environment = [ "AUTOPIPETTE_PROTOCOLS_DIR=/var/lib/autopipette/protocols" ];
-        ExecStart = "${triccaEnv}/bin/uvicorn autopipette_kiosk.main:app --host 0.0.0.0 --port ${toString port}";
+        ExecStart = "${triccaEnv}/bin/uvicorn autopipette_kiosk.main:app --host 127.0.0.1 --port ${toString port}";
         WorkingDirectory = "/var/lib/autopipette";
         Restart = "always";
         RestartSec = 5;

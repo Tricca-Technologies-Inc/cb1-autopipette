@@ -15,16 +15,10 @@
 
 python3Packages.buildPythonPackage {
   pname = "tricca-autopipette";
-  version = "0.1.0";
+  version = "0.2.0";
   pyproject = true;
 
   inherit src;
-
-  # pyproject declares the PyPI name "opencv-python"; nixpkgs provides the
-  # same cv2 module via opencv4 (in dependencies below), which doesn't
-  # register that dist name — strip it from wheel metadata so the
-  # runtime-deps check passes.
-  pythonRemoveDeps = [ "opencv-python" ];
 
   build-system = with python3Packages; [ setuptools ]; # pyproject: setuptools>=80
 
@@ -32,9 +26,7 @@ python3Packages.buildPythonPackage {
     aiohttp
     cmd2
     fastapi
-    opencv4 # nixpkgs name for the cv2 binding (opencv-python on PyPI)
     pydantic # v2 in current nixpkgs, satisfies pydantic>=2
-    requests
     uvicorn
     websockets
     numpy
