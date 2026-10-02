@@ -45,6 +45,18 @@ found along the way:
   [docs/hardware/cb1-gpio-pinout.md](../hardware/cb1-gpio-pinout.md).
   Header-pin-to-line mapping still needs an in-person silkscreen/schematic
   cross-reference — [issue #36](https://github.com/Tricca-Technologies-Inc/cb1-autopipette/issues/36).
+- **2026-10-02 — tricca-src bumped to `5859597` (#47, re-doing a bump
+  that silently dropped out of #41's squash-merge).** `prime.sh` +
+  `switch` clean, Klipper came up `ready` (no MCU-shutdown latch this
+  time). `tapd.service` crash-looped on start — a breaking upstream
+  schema change (`max_travel_mm` now required, `calibration_steps` →
+  `calibration_mm` renamed + rescaled ×0.25) hit marie's machine-owned
+  `/var/lib/autopipette/config/pipettes/*.json`, seeded from an older
+  rev. Fixed by copying upstream's current shared pipette configs onto
+  marie — verified to be the exact same calibration data, just migrated,
+  not different numbers. All services (klipper, moonraker, tapd,
+  autopipette, kiosk, mainsail-nginx) active after. Full writeup:
+  [docs/incidents/2026-10-02-marie-pipette-config-schema-migration.md](../incidents/2026-10-02-marie-pipette-config-schema-migration.md).
 
 ## Storage (issue #19)
 
