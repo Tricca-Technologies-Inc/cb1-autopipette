@@ -46,7 +46,9 @@ built it doubles as design history, and README.md is the operator doc.
   Klipper version over time ("MCU has deprecated code" warnings) since
   it's flashed once and never auto-updated. `mantaFirmware` (flake.nix)
   builds a correct binary from the same pinned source; `flash-manta`
-  (shell helper) flashes it via the board's STM32 ROM DFU bootloader. See
+  (shell helper) flashes it via the board's STM32 ROM DFU bootloader.
+  `octopusFirmware` does the same for the second USB MCU, a BTT Octopus
+  V1.1 (STM32F446, `[mcu octopus]`, plate drawers). See
   [ADR-0004](docs/adr/0004-manta-firmware-rebuilt-from-pinned-source.md).
 - printer.cfg seeds ONCE from printer-cfgs into /var/lib/moonraker/config/,
   then is machine-owned (SAVE_CONFIG + Mainsail editor rewrite it). See
