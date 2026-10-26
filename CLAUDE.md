@@ -42,14 +42,25 @@ built it doubles as design history, and README.md is the operator doc.
   land in a normal shell instead, so `tap` can run on tty2 while
   journalctl/htop/etc. run alongside it on another VT. See
   [ADR-0003](docs/adr/0003-tty2-debug-console-without-passwd-change.md).
-- Manta M8P V2.0 board firmware (STM32H723) drifts from the host's pinned
-  Klipper version over time ("MCU has deprecated code" warnings) since
-  it's flashed once and never auto-updated. `mantaFirmware` (flake.nix)
-  builds a correct binary from the same pinned source; `flash-manta`
-  (shell helper) flashes it via the board's STM32 ROM DFU bootloader.
-  `octopusFirmware` does the same for the second USB MCU, a BTT Octopus
-  V1.1 (STM32F446, `[mcu octopus]`, plate drawers). See
+- Board firmware drifts from the host's pinned Klipper version over time
+  ("MCU has deprecated code" warnings) since it's flashed once and never
+  auto-updated. So it's built from the same pinned source for both boards:
+  `mantaFirmware` (Manta M8P V2.0, STM32H723) and `octopusFirmware`
+  (Octopus V1.1, STM32F446, issue #49), flashed over USB DFU by
+  `flash-manta` and `flash-octopus` (issue #50) respectively. Each helper
+  must identify exactly its own board (chip-name glob / exact `serial:`
+  path), never a bare `usb-Klipper_*` glob. See
   [ADR-0004](docs/adr/0004-manta-firmware-rebuilt-from-pinned-source.md).
+- Axis-expansion topology: the six plate drawers (axes U V W A B C) run on
+  a BTT Octopus V1.1 (non-Pro, F446) as a second USB Klipper MCU
+  (`[mcu octopus]`); the M8P stays a USB MCU (`[mcu]`) with the plunger
+  (axis P) and servo; host MCU `[mcu CB1]` unchanged. EBB42 + M8P CAN
+  bridge deferred (owner, 2026-10-26; issues #55/#56). `bootstrap.sh`
+  writes both MCU sections by chip name (issue #51). MCU serial IDs never
+  enter the repo, `docs/machines/` included. Operator notes (drawer `G28`,
+  interlock refusals, E-stop recovery) in README; per-machine record
+  template in `docs/machines/README.md`. See
+  [ADR-0011](docs/adr/0011-octopus-v1.1-second-usb-mcu-for-plate-drawers.md).
 - printer.cfg seeds ONCE from printer-cfgs into /var/lib/moonraker/config/,
   then is machine-owned (SAVE_CONFIG + Mainsail editor rewrite it). See
   [ADR-0005](docs/adr/0005-printer-cfg-seed-once-then-machine-owned.md).

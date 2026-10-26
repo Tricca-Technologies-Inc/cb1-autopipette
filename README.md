@@ -111,6 +111,91 @@ on every machine (log out/in after the first switch to pick them up):
   tell them apart. `dfu-util` is also installed system-wide for manual
   recovery.
 
+## Operating with plate drawers (axis expansion)
+
+**Not live on any machine yet.** This section describes the machine after
+the axis expansion: six plate drawers on a second controller, a BTT Octopus
+V1.1 ([ADR-0011](docs/adr/0011-octopus-v1.1-second-usb-mcu-for-plate-drawers.md)),
+plus the plunger as axis P. It applies on a machine once all of these are
+done:
+
+- the stage-1 Klipper config is pinned (`printer-cfgs` bumped to CFG-1,
+  [issue #52](https://github.com/Tricca-Technologies-Inc/cb1-autopipette/issues/52)),
+  primed and switched;
+- the machine's own config is migrated by hand. A pin bump doesn't reach
+  an existing machine's `printer.cfg` (ADR-0005); the migration is in the
+  plan's
+  [RB1 §3](https://github.com/Tricca-Technologies-Inc/Tricca_AutoPipette/blob/main/docs/plans/axis-expansion/RB1-migration-and-operations.md);
+- the drawers and the Octopus are installed and commissioned (issue
+  [#57](https://github.com/Tricca-Technologies-Inc/cb1-autopipette/issues/57)
+  for nick, [#58](https://github.com/Tricca-Technologies-Inc/cb1-autopipette/issues/58)
+  for marie). Each machine's record in `docs/machines/<host>.md` shows
+  where it is.
+
+Until then, `G28` and the Home button behave as they do today. The notes
+below follow RB1 §4, adjusted by the
+[2026-10-26 addendum](https://github.com/Tricca-Technologies-Inc/Tricca_AutoPipette/blob/main/docs/plans/axis-expansion/ADDENDUM-2026-10-26.md)
+(no EBB42 toolboard, no CAN; tip-safe stops per plate).
+
+**Homing.** Bare `G28`, the kiosk's Home button and `tap`'s `init` /
+`home all` all home Z, X, Y, park the gantry, then **pull all six drawers
+in** and **home the plunger**.
+- Keep hands clear of the drawer openings while homing.
+- The plunger homes after the gantry parks (X150 Y150, tip fully raised),
+  so any liquid left in the tip is pushed out there. Keep that spot clear
+  of open labware, or put a waste tray there.
+- `G28` takes only the letters X Y Z U V W A B C P, separated by spaces
+  (`G28 U V`). Anything else (`G28 E`, `G28 XY`) is refused instead of
+  homing everything.
+- If homing fails, Klipper switches the motors off and everything counts
+  as unhomed. Fix the cause and home again.
+
+**Refused moves.** Klipper checks every move against a collision
+interlock. A refused move doesn't move anything, and its error starts with
+`Move refused by interlock:` followed by the reason.
+- Drawers only move on a plate command or during homing. A plate command
+  is refused if the gantry isn't homed, the tip is below the safe height
+  (`z_safe`), or that plate isn't homed.
+- The tip won't lower unless every drawer is homed and sitting at one of
+  its tip-safe stops (by default fully in or fully out). Move the drawer to
+  a stop first.
+- After motors are switched off (`M84`, idle timeout, or a stepper
+  disabled by hand), the drawers and plunger count as unhomed, even once a
+  motor is back on. Home again.
+- If a drawer is moved while a run is paused and the tip would come down
+  onto it, Resume is refused and the run stays paused. Put the drawer back
+  at a tip-safe stop and resume again.
+- Mainsail's Z-offset buttons move the tip too, and are refused under the
+  same rules.
+- `MANUAL_PROBE` and `Z_ENDSTOP_CALIBRATE` are disabled.
+- **Never type** `G1.1`, `G0.1`, any command ending in `_BASE`,
+  `M84.1`/`M18.1`, anything with `_PLATE_INTERNAL`, or `SET_GCODE_VARIABLE`
+  on `_PLATE_CFG`, `_PLATE_STATE`, `_PIPETTE_CFG`, `_PIPETTE_STATE` or
+  `_GSTATE`. These are Klipper's unchecked originals and bypass the
+  interlock.
+
+**E-stop recovery.** The E-stop cuts all power: the CB1, the M8P, the
+Octopus and the servo.
+1. Before resetting the E-stop, clear the hazard: nothing (hands,
+   labware) in a drawer's path or under the gantry.
+2. Reset the E-stop and wait for the kiosk to come back. Everything is now
+   unhomed, and any running protocol has ended. If Klipper reports an MCU
+   error (a board came up after Klipper did), send `FIRMWARE_RESTART` from
+   the Mainsail console.
+3. Note where the protocol stopped (run status, or `tap` history) before
+   anything else.
+4. Tip check. If a tip is on and holds liquid you care about, take it off
+   by hand now; homing pushes the liquid out at the park position. Then
+   reconcile the tip inventory with `tips` / `set_tips`, since tapd's saved
+   state is from before the stop.
+5. Home (above). The drawers retract and the plunger homes.
+6. Check that all plates show homed and in: `QUERY_PLATES` in the Mainsail
+   console, or `tap`'s `plates` command once tapd's drawer commands land
+   (TAP-4).
+7. Restart the protocol from a safe step, or start it again.
+
+Drill this once per machine during commissioning (test M-18).
+
 ## Updating machines after an app change
 
 The app itself (`tricca_autopipette` / `autopipette_kiosk`) lives in the

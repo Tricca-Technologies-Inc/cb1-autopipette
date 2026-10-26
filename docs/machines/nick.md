@@ -123,3 +123,30 @@ wiring are committed on `main` (PR #15) — but gen 8 predates them, so the
 new `switch` alias isn't live on nick yet (chicken-and-egg: it only
 activates once a switch actually succeeds). Until then, any attempt has to
 run the equivalent command by hand with the same flags.
+
+## Axis expansion
+
+Not started. Template and rules: [README.md](README.md#axis-expansion-record-template).
+No MCU serial IDs in this file: they live only in this machine's
+printer.cfg and its backup tarball.
+
+- Phase 0 survey: —
+- Migration path: —
+- Backup tarball: —
+- Previous M8P firmware (rollback): —
+- Firmware SHA-256:
+  - M8P (`mantaFirmware`, USB): —
+  - Octopus V1.1 F446 (`octopusFirmware`): —
+- `_PLATE_CFG.z_safe`: —
+- Drawer travel (`position_max`): —
+- Tip-safe stops (`_PLATE_CFG`, per plate):
+  - plate1 (U): —
+  - plate2 (V): —
+  - plate3 (W): —
+  - plate4 (A): —
+  - plate5 (B): —
+  - plate6 (C): —
+- `_PIPETTE_CFG.home_dir`: —
+- Powered checks (RB1 §3.7): —
+- Commissioning tests M-01…M-19, M-23: —
+- Stage 2 deployed: —
