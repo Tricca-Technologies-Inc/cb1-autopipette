@@ -15,6 +15,7 @@
 
 let
   cmd2-4 = python3Packages.callPackage ./cmd2.nix { };
+  aiohttp-3-14-5 = python3Packages.callPackage ./aiohttp.nix { }; # security bump, issue #59
 in
 python3Packages.buildPythonPackage {
   pname = "tricca-autopipette";
@@ -26,7 +27,7 @@ python3Packages.buildPythonPackage {
   build-system = with python3Packages; [ setuptools ]; # pyproject: setuptools>=80
 
   dependencies = with python3Packages; [
-    aiohttp
+    aiohttp-3-14-5
     cmd2-4
     fastapi
     pydantic # v2 in current nixpkgs, satisfies pydantic>=2
