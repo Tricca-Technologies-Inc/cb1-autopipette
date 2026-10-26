@@ -46,6 +46,8 @@ pkgs/tricca-autopipette.nix     python package from tricca-src
 pkgs/aiohttp.nix                security bump over pinned nixpkgs (#59)
 config/moonraker.conf           nix-managed, read-only
 config/klipper-host-mcu.config  Kconfig for the on-board host MCU build
+config/klipper-manta-mcu.config Kconfig for the Manta M8P V2.0 (H723) board firmware (ADR-0004)
+config/klipper-octopus-mcu.config Kconfig for the Octopus V1.1 (F446) board firmware (ADR-0004)
 config/tricca-logo.png          splash watermark source
 splash/                         theme installer + splash documentation
 docs/adr/                       architecture decision records

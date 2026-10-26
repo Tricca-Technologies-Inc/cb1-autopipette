@@ -79,6 +79,28 @@
               }
             }/klipper.bin $out/klipper.bin
           '';
+      # BTT Octopus V1.1 (non-Pro, STM32F446) board firmware -- the second
+      # USB MCU (`[mcu octopus]`, plate drawers) from the AutoPipette axis
+      # expansion plan. Same pattern and same pinned Klipper source as
+      # mantaFirmware, so this board can't drift from the host either.
+      # Kconfig copied verbatim from the plan's
+      # reference/firmware/octopus-v1.1-f446.config (Tricca_AutoPipette
+      # docs/plans/axis-expansion): 32 KiB bootloader, 12 MHz crystal.
+      #
+      # Ships only klipper.bin, for the same reason as mantaFirmware (#30).
+      octopusFirmware =
+        pkgs.runCommand "klipper-firmware-octopus-v1.1-f446-bin"
+          {
+            disallowedReferences = [ pkgs.gcc-arm-embedded ];
+          }
+          ''
+            install -Dm444 ${
+              pkgs.klipper-firmware.override {
+                mcu = "octopus-v1.1-f446";
+                firmwareConfig = ./config/klipper-octopus-mcu.config;
+              }
+            }/klipper.bin $out/klipper.bin
+          '';
       # `switch` invokes the system-manager CLI via `nix run`, which floats
       # to numtide/system-manager's latest commit unless pinned -- that CLI
       # can drift out of sync with the system-manager LIBRARY pinned below
@@ -184,6 +206,7 @@
             printer-cfgs
             klipperHostMcu
             mantaFirmware
+            octopusFirmware
             system-managerRev
             ioTuningApply
             switchHealthSampler
@@ -191,20 +214,28 @@
         };
       };
 
-      # Proves the env tapd/the kiosk actually run imports the patched aiohttp
-      # (pkgs/aiohttp.nix, issue #59), not just that the override evaluates.
-      checks.${system}.aiohttp-patched = pkgs.runCommand "aiohttp-patched" { } ''
-        ${triccaEnv}/bin/python3 -c '
-        from importlib.metadata import version
-        import aiohttp, yarl
-        assert version("aiohttp") == "3.14.5", version("aiohttp")
-        assert version("yarl") == "1.25.1", version("yarl")
-        '
-        touch $out
-      '';
+      checks.${system} = {
+        # Proves the env tapd/the kiosk actually run imports the patched aiohttp
+        # (pkgs/aiohttp.nix, issue #59), not just that the override evaluates.
+        aiohttp-patched = pkgs.runCommand "aiohttp-patched" { } ''
+          ${triccaEnv}/bin/python3 -c '
+          from importlib.metadata import version
+          import aiohttp, yarl
+          assert version("aiohttp") == "3.14.5", version("aiohttp")
+          assert version("yarl") == "1.25.1", version("yarl")
+          '
+          touch $out
+        '';
+        # Board firmware images, built by CI's `nix flake check` directly
+        # rather than relying on some helper in systemConfigs.default
+        # happening to reference them: octopusFirmware has no consumer
+        # until flash-octopus lands (#50), and a firmware that stops
+        # building should fail CI either way.
+        inherit mantaFirmware octopusFirmware;
+      };
 
       packages.${system} = {
-        inherit tricca-autopipette mantaFirmware;
+        inherit tricca-autopipette mantaFirmware octopusFirmware;
         default = tricca-autopipette;
         # aarch64-linux-tricca-autopipette = (import nixpkgs { crossSystem = "aarch64-linux"; }).callPackage ./pkgs/tricca-autopipette.nix { src = tricca-src; };
       };
