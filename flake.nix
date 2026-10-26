@@ -101,6 +101,9 @@
               }
             }/klipper.bin $out/klipper.bin
           '';
+      # Board-selection scripts for flash-manta/flash-octopus, separate so
+      # checks.mcu-select can exercise them against fake devices (#50).
+      mcuSelect = import ./pkgs/mcu-select.nix { inherit pkgs; };
       # `switch` invokes the system-manager CLI via `nix run`, which floats
       # to numtide/system-manager's latest commit unless pinned -- that CLI
       # can drift out of sync with the system-manager LIBRARY pinned below
@@ -207,6 +210,7 @@
             klipperHostMcu
             mantaFirmware
             octopusFirmware
+            mcuSelect
             system-managerRev
             ioTuningApply
             switchHealthSampler
@@ -232,6 +236,71 @@
         # until flash-octopus lands (#50), and a firmware that stops
         # building should fail CI either way.
         inherit mantaFirmware octopusFirmware;
+        # Runs the flash helpers' board-selection scripts (pkgs/mcu-select.nix)
+        # against a fake /dev/serial/by-id holding BOTH boards and a set of
+        # fake printer.cfg files. Placeholder serials only -- real MCU IDs
+        # never go in this repo.
+        mcu-select = pkgs.runCommand "mcu-select" { } ''
+          fail() { echo "FAIL: $*" >&2; exit 1; }
+          refuses() { if "$@" >/dev/null 2>&1; then fail "expected a refusal: $*"; fi; }
+
+          byid=$PWD/by-id
+          mkdir -p "$byid"
+          touch "$PWD/ttyACM0" "$PWD/ttyACM1"
+          M=$byid/usb-Klipper_stm32h723xx_MANTA00000000-if00
+          O=$byid/usb-Klipper_stm32f446xx_OCTOPUS00000-if00
+          ln -s "$PWD/ttyACM0" "$M"
+          ln -s "$PWD/ttyACM1" "$O"
+
+          # flash-manta: with both boards attached it picks the Manta, never
+          # the Octopus.
+          [ "$(${mcuSelect.mantaSerial} "$byid")" = "$M" ] || fail "manta-serial with both boards"
+          mkdir only-octopus two-mantas
+          ln -s "$PWD/ttyACM1" only-octopus/"$(basename "$O")"
+          refuses ${mcuSelect.mantaSerial} "$PWD/only-octopus"
+          ln -s "$PWD/ttyACM0" two-mantas/usb-Klipper_stm32h723xx_MANTA00000000-if00
+          ln -s "$PWD/ttyACM1" two-mantas/usb-Klipper_stm32h723xx_MANTA11111111-if00
+          refuses ${mcuSelect.mantaSerial} "$PWD/two-mantas"
+          refuses ${mcuSelect.mantaSerial} "$PWD/empty-dir-that-does-not-exist"
+
+          # flash-octopus: the exact [mcu octopus] serial, or a refusal.
+          cfg() { printf '%s\n' "$@" > printer.cfg; }
+          octo() { ${mcuSelect.octopusSerial} printer.cfg; }
+          cfg "[mcu]" "serial: $M" "" "[mcu octopus]" "serial: $O" "restart_method: command"
+          [ "$(octo)" = "$O" ] || fail "plain [mcu octopus]"
+          cfg "[mcu octopus]" "Serial = $O   # the plate-drawer board" "[mcu]" "serial: $M"
+          [ "$(octo)" = "$O" ] || fail "= separator, inline comment, section order"
+          cfg "[mcu]" "serial: $M"
+          refuses octo # no [mcu octopus] section
+          refuses ${mcuSelect.octopusSerial} "$PWD/no-such-printer.cfg"
+          cfg "[mcu octopus]" "restart_method: command"
+          refuses octo # section without serial
+          cfg "[mcu octopus]" "serial:"
+          refuses octo # empty serial
+          cfg "[mcu octopus]" "restart_method: command" "  serial: $O"
+          refuses octo # indented line is a continuation, not a key
+          cfg "[mcu]" "serial: $M" "#*# [mcu octopus]" "#*# serial: $O"
+          refuses octo # SAVE_CONFIG comment block is not a section
+          cfg "[mcu octopus]" "serial: $O" "[mcu octopus]" "serial: $O"
+          refuses octo # duplicate section
+          cfg "[mcu octopus]" "serial: $byid/usb-Klipper_stm32f446xx_UNPLUGGED000-if00"
+          refuses octo # path not present
+          cfg "[mcu octopus]" "serial: $M"
+          refuses octo # path is the Manta (H723), not an F446
+          cfg "[mcu octopus]" "serial: $PWD/ttyACM1"
+          refuses octo # raw tty, not a named Klipper F446 device
+          ln -s "$PWD/ttyACM1" "$byid/usb-Klipper_stm32f446xx_ALIAS0000000-if00"
+          cfg "[mcu]" "serial: $byid/usb-Klipper_stm32f446xx_ALIAS0000000-if00" "[mcu octopus]" "serial: $O"
+          refuses octo # same device as [mcu], under another name
+
+          # DFU device count: one board = several alt-setting lines.
+          dfu() { printf 'Found DFU: [0483:df11] ver=0200, devnum=%s, cfg=1, intf=0, path="%s", alt=%s, name="@x", serial="PLACEHOLDER"\n' "$@"; }
+          [ "$(printf 'nothing\n' | ${mcuSelect.stm32DfuCount})" = 0 ] || fail "dfu count 0"
+          [ "$({ dfu 5 1-1 0; dfu 5 1-1 1; dfu 5 1-1 2; } | ${mcuSelect.stm32DfuCount})" = 1 ] || fail "dfu count 1"
+          [ "$({ dfu 5 1-1 0; dfu 5 1-1 1; dfu 6 1-2 0; } | ${mcuSelect.stm32DfuCount})" = 2 ] || fail "dfu count 2"
+
+          touch $out
+        '';
       };
 
       packages.${system} = {
