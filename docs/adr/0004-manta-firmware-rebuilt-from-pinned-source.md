@@ -30,3 +30,25 @@ STM32 ROM DFU ID (`0483:df11`) when asked, so the flash helpers must
 identify their own board before touching anything (issue #50). The
 Manta stays a plain USB MCU; the M8P CAN bridge and the EBB42 are
 deferred (plan addendum D35).
+
+## Update, 2026-10-26 — reproducible images
+
+Klipper stamps a version string into every image. Outside a git checkout,
+which is always the case under Nix, that string is `?` plus the build time
+and hostname, so two builds of the same pin never had the same SHA-256 and
+a workstation build could not be checked against a CI build. flake.nix's
+`klipperFirmware` wrapper now fixes the string to the version klippy itself
+reports (`<klipper version>-NixOS`) and drops the time/hostname suffix, for
+all three images (host MCU, M8P, Octopus). `nix build --rebuild` of the M8P
+and Octopus images produced byte-identical output.
+
+At nixpkgs `c59305b` (Klipper `7bc4d09`, `0.13.0-unstable-2026-09-28`),
+`klipper.bin` hashes are:
+
+| Image | SHA-256 |
+|---|---|
+| `mantaFirmware` | `8ab63676a0e0b21f5210aa817d1c1ee0f4221efa442274f7a74b6b0fa713bd10` |
+| `octopusFirmware` | `5e585bf3ac7d15b1c60cc6c7ca3621e2e6db24ff94bdc365ce10e79c15bf39bf` |
+
+Any change to the nixpkgs pin, the Kconfig or the ARM toolchain changes
+these. Re-record them here, and in the machine records, when one moves.

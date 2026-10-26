@@ -37,6 +37,21 @@
         tricca-autopipette
         ps.uvicorn
       ]);
+      # nixpkgs' klipper-firmware, made reproducible. Klipper stamps a version
+      # string into every image (klipper.bin's embedded data dictionary).
+      # Outside a git checkout -- always the case under Nix -- it falls back
+      # to "?" plus the build time and hostname, so no two builds of the
+      # same pin hash the same. Use the version klippy itself reports
+      # instead: nixpkgs writes "<version>-NixOS" into klippy's .version.
+      klipperFirmware =
+        args:
+        (pkgs.klipper-firmware.override args).overrideAttrs (old: {
+          postPatch = old.postPatch + ''
+            echo "${pkgs.klipper.version}-NixOS" > klippy/.version
+            substituteInPlace scripts/buildcommands.py \
+              --replace-fail "    if not cleanbuild:" "    if False:"
+          '';
+        });
       # Host MCU: klipper.elf built for the "Linux process" target, running on
       # the CB1 itself (printer.cfg: [mcu CB1] serial=/tmp/klipper_host_mcu).
       # Built from the SAME pinned klipper source as klippy, so host-MCU and
@@ -47,7 +62,7 @@
       # and linux-headers, pulling ~250 MiB of build toolchain into the
       # runtime closure (issue #30). Strip it at the end of installPhase.
       klipperHostMcu =
-        (pkgs.klipper-firmware.override {
+        (klipperFirmware {
           mcu = "host";
           firmwareConfig = ./config/klipper-host-mcu.config;
         }).overrideAttrs
@@ -73,7 +88,7 @@
           }
           ''
             install -Dm444 ${
-              pkgs.klipper-firmware.override {
+              klipperFirmware {
                 mcu = "manta-m8p-v2";
                 firmwareConfig = ./config/klipper-manta-mcu.config;
               }
@@ -95,7 +110,7 @@
           }
           ''
             install -Dm444 ${
-              pkgs.klipper-firmware.override {
+              klipperFirmware {
                 mcu = "octopus-v1.1-f446";
                 firmwareConfig = ./config/klipper-octopus-mcu.config;
               }
