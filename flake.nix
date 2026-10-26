@@ -301,6 +301,13 @@
 
           touch $out
         '';
+
+        # bootstrap.sh's MCU serial detection (issue #51), run against a fake
+        # /dev/serial/by-id and a temp printer.cfg.
+        write-mcu-serials = pkgs.runCommand "write-mcu-serials" { } ''
+          ${pkgs.bash}/bin/bash ${./tests/write-mcu-serials.test.sh} ${./scripts/write-mcu-serials.sh}
+          touch $out
+        '';
       };
 
       packages.${system} = {

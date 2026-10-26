@@ -32,6 +32,8 @@ patched versions.
 flake.nix                       inputs + systemConfigs.default
 bootstrap.sh                    ALL imperative steps; run once per machine (interactive)
 prime.sh                        WORKSTATION-side: build + push a closure to a machine, see below
+scripts/write-mcu-serials.sh    bootstrap's [mcu]/[mcu octopus] serial detection; re-runnable
+tests/                          off-device tests, run as flake checks
 .github/workflows/ci.yml        builds systemConfigs.default + packages for real, required on main
 modules/base.nix                platform + shared packages
 modules/networking.nix          udev rule + netplan replacement (replaceExisting)
@@ -71,7 +73,7 @@ there. Re-seed by deleting the file and restarting klipper.
    installs the splash. Expect the first switch to download closures and
    compile the small host-MCU firmware.
 4. Per-machine steps the script prints at the end: wifi via `nmcli` (credentials
-   never enter the repo), MCU serial ID via Mainsail, reboot.
+   never enter the repo), MCU serial IDs if bootstrap couldn't detect them, reboot.
 
 Boot chain: u-boot → Tricca splash (throbber below logo) → services
 (klipper-mcu → klipper → moonraker → autopipette) → kiosk waits for :8000 →
@@ -262,8 +264,7 @@ from u-boot if a regression bites.
 
 ## Per-machine state (never in the repo)
 
-hostname · wifi credentials (NetworkManager) · MCU serial IDs (Manta M8P,
-and the Octopus V1.1 once fitted) ·
+hostname · wifi credentials (NetworkManager) · MCU serial IDs (M8P, Octopus) ·
 SAVE_CONFIG calibration values · TLS/tailscale identities if added.
 Everything else must come from this repo — if a machine works and the repo
 doesn't say why, that's a bug in the repo.
@@ -305,9 +306,12 @@ match anything below.
   mismatch, not a wiring/permissions problem.** The Manta's USB serial ID is
   unique per physical board, so it can never live in the shared
   `tricca-autopipette.cfg` macros file — `bootstrap.sh` auto-detects it from
-  `/dev/serial/by-id/usb-Klipper_*` and writes it into printer.cfg
-  (machine-owned) instead. Check `dmesg | grep -i acm` and
-  `/dev/serial/by-id/` against printer.cfg's `[mcu]` section if this recurs.
+  `/dev/serial/by-id/usb-Klipper_stm32h723xx_*` and writes it into printer.cfg
+  (machine-owned) instead; the Octopus V1.1 (`usb-Klipper_stm32f446xx_*`)
+  goes in `[mcu octopus]` the same way. Check `dmesg | grep -i acm` and
+  `/dev/serial/by-id/` against printer.cfg's `[mcu]` / `[mcu octopus]`
+  sections if this recurs. `sudo bash /opt/cb1-autopipette/scripts/write-mcu-serials.sh`
+  adds any missing section on its own; it never changes an existing one.
 - **A board left in STM32 DFU mode (after an interrupted/failed
   `flash-manta` or `flash-octopus`), or a board you need to force into DFU:**
   stop klipper (`sudo systemctl stop klipper`), then on the board hold
