@@ -44,6 +44,7 @@ modules/aliases.nix             shell helpers in /etc/profile.d (fleet-wide)
 modules/nix-settings.nix        trusted-users grant for prime.sh's push (see below)
 pkgs/tricca-autopipette.nix     python package from tricca-src
 pkgs/aiohttp.nix                security bump over pinned nixpkgs (#59)
+pkgs/mcu-select.nix             flash helpers' board selection (tested by checks.mcu-select)
 config/moonraker.conf           nix-managed, read-only
 config/klipper-host-mcu.config  Kconfig for the on-board host MCU build
 config/klipper-manta-mcu.config Kconfig for the Manta M8P V2.0 (H723) board firmware (ADR-0004)
@@ -93,7 +94,20 @@ on every machine (log out/in after the first switch to pick them up):
   running Klipper connection, board reboots into the STM32 ROM DFU
   (masked in silicon — a failed/interrupted write can't brick it, just
   re-run), writes via `dfu-util` at the 128KiB-bootloader offset, board
-  reboots back into the new firmware automatically.
+  reboots back into the new firmware automatically. Picks the board by chip
+  name (`usb-Klipper_stm32h723xx_*`) and refuses on zero or several
+  matches, so an attached Octopus is never selected.
+- `flash-octopus` — reflash the Octopus V1.1 (STM32F446, `[mcu octopus]`)
+  board firmware the same way, at `0x08008000` (keeps its 32 KiB
+  bootloader). Targets the exact `serial:` from printer.cfg's
+  `[mcu octopus]` section, never a glob, and refuses if that section,
+  serial or device is missing, isn't an F446, or is the same device as
+  `[mcu]`. **Not yet verified on hardware** (issue #50) — if the board
+  never reaches DFU, use the SD-card fallback under Troubleshooting.
+- Both flash helpers refuse if more than one STM32 DFU device (`0483:df11`)
+  is present: the M8P and the Octopus share that ID in ROM DFU, so it can't
+  tell them apart. `dfu-util` is also installed system-wide for manual
+  recovery.
 
 ## Updating machines after an app change
 
@@ -208,6 +222,33 @@ match anything below.
   `/dev/serial/by-id/usb-Klipper_*` and writes it into printer.cfg
   (machine-owned) instead. Check `dmesg | grep -i acm` and
   `/dev/serial/by-id/` against printer.cfg's `[mcu]` section if this recurs.
+- **A board left in STM32 DFU mode (after an interrupted/failed
+  `flash-manta` or `flash-octopus`), or a board you need to force into DFU:**
+  stop klipper (`sudo systemctl stop klipper`), then on the board hold
+  BOOT, tap RESET, release BOOT. `sudo dfu-util -l` must show exactly ONE
+  `[0483:df11]` device (one `path=` value; each device prints several
+  `alt=` lines). Both boards use that same ID in DFU, so if two show up,
+  RESET the one you're not flashing (without BOOT) first. Write
+  the current generation's image at that board's application offset —
+  the wrong offset overwrites its bootloader:
+  ```
+  # Octopus V1.1 (F446, 32 KiB bootloader)
+  sudo dfu-util -d 0483:df11 -a 0 -s 0x08008000:leave -D <octopusFirmware>/klipper.bin
+  # Manta M8P V2.0 (H723, 128 KiB bootloader)
+  sudo dfu-util -d 0483:df11 -a 0 -s 0x08020000:leave -D <mantaFirmware>/klipper.bin
+  ```
+  Find the store paths with `grep -o '/nix/store/[^"]*klipper-firmware-[^/]*' /etc/profile.d/tricca-aliases.sh`.
+  dfu-util may report `Error during download get_status` after
+  `File downloaded successfully` — that's the `:leave` reset, not a
+  failure. Then `sudo systemctl start klipper`. The ROM bootloader is in
+  silicon; a bad write can't brick the board, just retry.
+- **Octopus SD-card fallback** (if DFU doesn't work for it): copy the
+  image to a FAT-formatted microSD card as `firmware.bin`
+  (`cp <octopusFirmware>/klipper.bin /media/.../firmware.bin`), insert it
+  in the Octopus, power-cycle the board. Its BTT bootloader flashes it and
+  renames the file to `FIRMWARE.CUR` once taken. Before overwriting, save
+  any existing `firmware.bin` / `FIRMWARE.CUR` from the card — that's the
+  previous firmware to roll back to.
 - **After `switch`, Klipper stuck `shutdown` with "Lost communication with
   MCU 'CB1'"** means the restart of `klipper-mcu.service` raced klippy's
   live connection to it. This cascades into a real MCU shutdown too (the

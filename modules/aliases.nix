@@ -4,6 +4,8 @@
 {
   pkgs,
   mantaFirmware,
+  octopusFirmware,
+  mcuSelect,
   system-managerRev,
   ioTuningApply,
   switchHealthSampler,
@@ -158,19 +160,27 @@ in
       # ROM DFU (0483:df11, masked in silicon -- can't be bricked by a bad
       # write) -> dfu-util writes at the 128KiB-bootloader offset -> board
       # reboots back into the new Klipper firmware automatically.
+      #
+      # Board selection (pkgs/mcu-select.nix's manta-serial) globs the
+      # chip name usb-Klipper_stm32h723xx_* only, and refuses on zero or
+      # more than one match. Regression guard: with the Octopus V1.1 also
+      # attached (usb-Klipper_stm32f446xx_*), the F446 is never selected --
+      # checks.mcu-select in flake.nix tests exactly that in CI. Never
+      # loosen this to usb-Klipper_*.
+      #
+      # Both STM32 boards enter the same ROM DFU ID (0483:df11), so also
+      # refuse if a board is already in DFU before the request, or if more
+      # than one DFU device shows up after it -- otherwise dfu-util could
+      # write this image into the Octopus.
       flash-manta() {
-        local devs
-        devs=($(ls /dev/serial/by-id/usb-Klipper_stm32h723xx_* 2>/dev/null))
-        if [ "''${#devs[@]}" -eq 0 ]; then
-          echo "No Klipper MCU found on USB. Is the Manta M8P plugged in and powered?" >&2
-          return 1
-        elif [ "''${#devs[@]}" -gt 1 ]; then
-          echo "Multiple Klipper MCUs found -- not sure which is the Manta:" >&2
-          printf '  %s\n' "''${devs[@]}" >&2
+        local dev
+        dev=$(${mcuSelect.mantaSerial}) || return 1
+        local fw="${mantaFirmware}/klipper.bin"
+        if [ "$(sudo ${pkgs.dfu-util}/bin/dfu-util --list 2>/dev/null | ${mcuSelect.stm32DfuCount})" -ne 0 ]; then
+          echo "A board is already in STM32 DFU mode (0483:df11) -- can't tell which" >&2
+          echo "one it is. Recover it first (see README Troubleshooting), then retry." >&2
           return 1
         fi
-        local dev="''${devs[0]}"
-        local fw="${mantaFirmware}/klipper.bin"
         echo "==> Stopping klipper.service"
         sudo systemctl stop klipper
 
@@ -185,12 +195,19 @@ in
         fi
 
         echo "==> Waiting for DFU device..."
+        local n=0
         for _ in $(seq 1 10); do
-          sudo ${pkgs.dfu-util}/bin/dfu-util --list 2>/dev/null | grep -q "0483:df11" && break
+          n=$(sudo ${pkgs.dfu-util}/bin/dfu-util --list 2>/dev/null | ${mcuSelect.stm32DfuCount})
+          [ "$n" -ge 1 ] && break
           sleep 1
         done
-        if ! sudo ${pkgs.dfu-util}/bin/dfu-util --list 2>/dev/null | grep -q "0483:df11"; then
+        if [ "$n" -eq 0 ]; then
           echo "Board never appeared in DFU mode -- restarting klipper and aborting." >&2
+          sudo systemctl start klipper
+          return 1
+        elif [ "$n" -gt 1 ]; then
+          echo "$n STM32 DFU devices present -- can't tell which is the Manta. Not" >&2
+          echo "flashing; see README Troubleshooting to recover each board." >&2
           sudo systemctl start klipper
           return 1
         fi
@@ -217,6 +234,100 @@ in
         sleep 3
         echo "==> Done. Verify with: logs klipper   (look for 'MCU has deprecated code' -- should be gone)"
       }
+
+      # Flash the Octopus V1.1 (STM32F446, `[mcu octopus]`, plate drawers)
+      # board firmware -- the octopusFirmware package, built from the same
+      # pinned Klipper source as the host. Same flow as flash-manta, with
+      # three differences that all come from sharing the bus with the Manta:
+      #
+      # - The target is the exact `serial:` path from printer.cfg's
+      #   [mcu octopus] section, never a glob (pkgs/mcu-select.nix's
+      #   octopus-serial: refuses if the section/serial is missing, the path
+      #   isn't present, isn't an stm32f446xx Klipper device, or is the same
+      #   device as [mcu]).
+      # - Both STM32 boards enter the SAME ROM DFU ID (0483:df11), so a DFU
+      #   device can't tell us which board it is. Refuse unless no board is
+      #   in DFU before we start and exactly one is after the request --
+      #   otherwise dfu-util could write this image (built for 0x08008000,
+      #   32 KiB bootloader) into the Manta.
+      # - klipper.service is restarted on EVERY exit path (EXIT trap; the
+      #   body runs in a subshell so the trap can't leak into the login
+      #   shell), including a failed flash -- the board's ROM DFU can't be
+      #   bricked by a bad write, so klipper coming back up erroring on a
+      #   board still in DFU is better than a silently stopped printer.
+      #
+      # UNVERIFIED ON HARDWARE (issue #50): whether --request-bootloader
+      # actually lands an F446 behind BTT's 32 KiB stock bootloader in ROM
+      # DFU. If "never appeared in DFU mode" shows up, recover with
+      # BOOT+RESET or the SD card (README Troubleshooting).
+      flash-octopus() (
+        local cfg=/var/lib/moonraker/config/printer.cfg
+        local fw="${octopusFirmware}/klipper.bin"
+        local dfu="${pkgs.dfu-util}/bin/dfu-util"
+        local dev
+        dev=$(sudo ${mcuSelect.octopusSerial} "$cfg") || exit 1
+        dfu_count() { sudo "$dfu" --list 2>/dev/null | ${mcuSelect.stm32DfuCount}; }
+
+        if [ "$(dfu_count)" -ne 0 ]; then
+          echo "A board is already in STM32 DFU mode (0483:df11) -- can't tell which" >&2
+          echo "one it is. Recover it first (see README Troubleshooting), then retry." >&2
+          exit 1
+        fi
+
+        trap 'echo "==> Restarting klipper.service"; sudo systemctl start klipper' EXIT
+        trap 'exit 130' INT TERM HUP
+        echo "==> Stopping klipper.service"
+        sudo systemctl stop klipper
+
+        echo "==> Requesting bootloader on $dev"
+        local req_out
+        req_out=$(sudo ${flashPython}/bin/python3 ${flashtool} -d "$dev" --request-bootloader -v 2>&1)
+        echo "$req_out"
+        if ! echo "$req_out" | grep -q "Bootloader Request Complete"; then
+          echo "Bootloader request failed -- aborting." >&2
+          exit 1
+        fi
+
+        echo "==> Waiting for DFU device..."
+        local n=0
+        for _ in $(seq 1 10); do
+          n=$(dfu_count)
+          [ "$n" -ge 1 ] && break
+          sleep 1
+        done
+        if [ "$n" -eq 0 ]; then
+          echo "Board never appeared in DFU mode -- aborting. If it's stuck, see" >&2
+          echo "README Troubleshooting (BOOT+RESET, or flash by SD card)." >&2
+          exit 1
+        elif [ "$n" -gt 1 ]; then
+          echo "$n STM32 DFU devices present -- can't tell which is the Octopus." >&2
+          echo "Not flashing. See README Troubleshooting to recover each board." >&2
+          exit 1
+        fi
+
+        echo "==> Flashing $fw at 0x08008000 (keeps the 32 KiB bootloader)"
+        # Same dfu-util exit-code caveat as flash-manta: the :leave reset
+        # makes it report an error after a good write, so check the output.
+        local flash_out
+        flash_out=$(sudo "$dfu" -d 0483:df11 -a 0 -s 0x08008000:leave -D "$fw" 2>&1)
+        echo "$flash_out"
+        if ! echo "$flash_out" | grep -q "File downloaded successfully"; then
+          echo "Flash failed. The ROM bootloader can't be bricked by this -- re-run" >&2
+          echo "flash-octopus, or see README Troubleshooting." >&2
+          exit 1
+        fi
+
+        echo "==> Waiting for the board to come back as $dev..."
+        for _ in $(seq 1 15); do
+          [ -e "$dev" ] && break
+          sleep 1
+        done
+        if [ ! -e "$dev" ]; then
+          echo "$dev didn't come back. Check: ls /dev/serial/by-id/" >&2
+          exit 1
+        fi
+        echo "==> Done. Verify with: logs klipper   (mcu 'octopus' should connect)"
+      )
     '';
   };
 }
