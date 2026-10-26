@@ -18,6 +18,14 @@ Pinned inputs: `nixpkgs`, `system-manager`, `tricca-src` (the AutoPipette app
 repo) and `printer-cfgs` (the Klipper configs repo). `flake.lock` is the
 machine spec; commit it always.
 
+Security override: `pkgs/aiohttp.nix` takes the app's aiohttp to 3.14.5 (with
+yarl 1.25.1) on top of the pinned nixpkgs, which ships the vulnerable aiohttp
+3.14.3 (issue #59). It exists so we don't have to bump nixpkgs, which would
+move the pinned Klipper. Delete it when nixpkgs is next bumped deliberately
+past those versions: its asserts fail evaluation once that happens. The flake
+check `aiohttp-patched` proves the env tapd and the kiosk run imports the
+patched versions.
+
 ## Repo layout
 
 ```
@@ -35,6 +43,7 @@ modules/kiosk.nix               chromium kiosk on tty1; splash handoff
 modules/aliases.nix             shell helpers in /etc/profile.d (fleet-wide)
 modules/nix-settings.nix        trusted-users grant for prime.sh's push (see below)
 pkgs/tricca-autopipette.nix     python package from tricca-src
+pkgs/aiohttp.nix                security bump over pinned nixpkgs (#59)
 config/moonraker.conf           nix-managed, read-only
 config/klipper-host-mcu.config  Kconfig for the on-board host MCU build
 config/tricca-logo.png          splash watermark source

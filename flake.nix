@@ -191,6 +191,18 @@
         };
       };
 
+      # Proves the env tapd/the kiosk actually run imports the patched aiohttp
+      # (pkgs/aiohttp.nix, issue #59), not just that the override evaluates.
+      checks.${system}.aiohttp-patched = pkgs.runCommand "aiohttp-patched" { } ''
+        ${triccaEnv}/bin/python3 -c '
+        from importlib.metadata import version
+        import aiohttp, yarl
+        assert version("aiohttp") == "3.14.5", version("aiohttp")
+        assert version("yarl") == "1.25.1", version("yarl")
+        '
+        touch $out
+      '';
+
       packages.${system} = {
         inherit tricca-autopipette mantaFirmware;
         default = tricca-autopipette;
