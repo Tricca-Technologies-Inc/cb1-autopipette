@@ -102,7 +102,9 @@ built it doubles as design history, and README.md is the operator doc.
   [docs/incidents/2026-07-30-oom-corruption-kernel-panic.md](docs/incidents/2026-07-30-oom-corruption-kernel-panic.md).
 - Helpers (modules/aliases.nix → /etc/profile.d): `switch`,
   `splash-preview [s]`, `ap-status`, `logs [unit]`, `ap-restart`, `gc`,
-  `flash-manta` (reflash the Manta board firmware, see Architecture)
+  `flash-manta` (reflash the Manta board firmware, see Architecture),
+  `flash-octopus` (same for the Octopus V1.1, keyed to printer.cfg's exact
+  `[mcu octopus]` serial; unverified on hardware until issue #50 closes)
 - **Always prime before switch, on every machine** — `switch` refuses
   otherwise: `./prime.sh <host> [ssh-user]` from a WORKSTATION checkout
   first — builds `systemConfigs.default` there, pushes the closure over
