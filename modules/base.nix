@@ -12,6 +12,10 @@
       # gpiodetect/gpioinfo/gpioget/gpioset -- CB1 SoC GPIO discovery
       # and debugging via the Manta M8P V2.0 expansion header; see
       # docs/hardware/cb1-gpio-pinout.md and ADR-0010.
+      dfu-util
+      # Manual STM32 ROM-DFU recovery for the Manta M8P and Octopus V1.1
+      # (BOOT+RESET, then dfu-util by hand -- README Troubleshooting).
+      # flash-manta/flash-octopus call it by store path regardless.
     ];
 
     # Mask Debian's journal-nocow.conf (same-name file in /etc overrides
