@@ -6,6 +6,11 @@ README. The README's Troubleshooting section links here for the full story
 behind any of its short gotchas; check here first if you hit something new
 that isn't in README at all.
 
+- [2026-10-28-nick-missing-mcu-serial-and-29-migration.md](2026-10-28-nick-missing-mcu-serial-and-29-migration.md) —
+  resolved. The kiosk timed out on a deploy because tapd was crash-looping
+  on the #29 schema; nick also needed `rotation_distance` 8 → 2. Separately,
+  Klipper had been in `error` since the Sep 8 re-bootstrap with no `[mcu]`
+  serial. Fixed with `write-mcu-serials.sh`.
 - [2026-09-24-marie-switch-mcu-shutdown-cascade.md](2026-09-24-marie-switch-mcu-shutdown-cascade.md) —
   resolved, recovery is one command. `switch` restarting `klipper-mcu.service`
   raced klippy's live connection to it, dropping CB1 (the host virtual MCU);
