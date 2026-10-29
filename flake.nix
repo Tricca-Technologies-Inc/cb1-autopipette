@@ -196,6 +196,18 @@
         done
         echo "=== sampler stopped at $(/usr/bin/date -Iseconds) ===" >> "$logfile"
       '';
+      # Post-switch health summary (issue #69): Klipper state + unit status,
+      # run by the `switch` alias. curl/jq from nixpkgs; systemctl,
+      # journalctl and coreutils stay the host's (Armbian's systemd).
+      switchHealthCheck = pkgs.writeShellScript "switch-health-check" ''
+        export PATH=${
+          pkgs.lib.makeBinPath [
+            pkgs.curl
+            pkgs.jq
+          ]
+        }:$PATH
+        exec ${pkgs.bash}/bin/bash ${./scripts/switch-health-check.sh} "$@"
+      '';
     in
     {
       # Applied with the `switch` shell alias (modules/aliases.nix), which
@@ -229,6 +241,7 @@
             system-managerRev
             ioTuningApply
             switchHealthSampler
+            switchHealthCheck
             ;
         };
       };
@@ -319,6 +332,13 @@
 
         # bootstrap.sh's MCU serial detection (issue #51), run against a fake
         # /dev/serial/by-id and a temp printer.cfg.
+        # The `switch` alias's health summary (issue #69), against fake
+        # curl/systemctl/journalctl.
+        switch-health-check = pkgs.runCommand "switch-health-check" { nativeBuildInputs = [ pkgs.jq ]; } ''
+          ${pkgs.bash}/bin/bash ${./tests/switch-health-check.test.sh} ${./scripts/switch-health-check.sh}
+          touch $out
+        '';
+
         write-mcu-serials = pkgs.runCommand "write-mcu-serials" { } ''
           ${pkgs.bash}/bin/bash ${./tests/write-mcu-serials.test.sh} ${./scripts/write-mcu-serials.sh}
           touch $out
