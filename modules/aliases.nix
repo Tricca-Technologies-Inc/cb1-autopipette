@@ -9,6 +9,7 @@
   system-managerRev,
   ioTuningApply,
   switchHealthSampler,
+  switchHealthCheck,
   ...
 }:
 let
@@ -117,6 +118,13 @@ in
         sleep 6
         sudo rm -f "$stopfile"
         sudo systemctl start autopipette kiosk
+        # A switch can succeed while the machine is broken (nick ran for
+        # weeks with Klipper in `error`, issue #69), so check the result
+        # and fail on an unhealthy machine too.
+        sudo ${switchHealthCheck} 2>&1 | sudo tee -a "$logfile"
+        if [ "''${PIPESTATUS[0]}" -ne 0 ] && [ "$rc" -eq 0 ]; then
+          rc=1
+        fi
         echo "Log: $logfile"
         return $rc
       }
