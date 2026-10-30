@@ -27,18 +27,20 @@ Survey form `docs/plans/axis-expansion/phase0-survey.md` (Tricca_AutoPipette, Re
 | ✓ | `SAVE_CONFIG` block | no |
 | ✓ | **Path** | **B (hand merge).** ⛔ The owner must approve the diff (RB1 §3 step 3) |
 
-**⛔ Decisions for the owner before the Path B merge:**
-1. **`[manual_stepper plate]` on the M8P.** A single prototype drawer drive on M8P pins. CFG-1 puts all six plates on the Octopus as `plate1..6`. Remove it, or does that drive become one of the six?
-2. **`[output_pin n2_valve]` on PF7.** Keep it. It doesn't conflict with CFG-1. For tapd's `trigger` command, add it to the system config's `trigger_pins`.
-3. **Run currents (0.4 A) are below the plan (0.8 / 0.65).** Intended for marie's motors? See §4.
+**Owner decisions for the Path B merge (James, 2026-10-29):**
+1. **`[manual_stepper plate]` and `[tmc2209 manual_stepper plate]` on the M8P: remove.** CFG-1's six Octopus plates replace this prototype drawer drive.
+2. **`[output_pin n2_valve]` on PF7: keep.** It doesn't conflict with CFG-1. Add it to the system config's `trigger_pins` if tapd's `trigger` command should drive it.
+3. **Run currents of 0.4 A: intentional** for marie's motors. Keep them, along with the inverted X/Y endstops.
+
+The full merged diff still needs the owner's approval before it's applied (RB1 §3 step 3).
 
 ## 4. Hardware as built
 
 | ✓ | Item | Plan expects | Found |
 |---|---|---|---|
 | ☐ | Controller | Manta M8P **V2.0** + CB1 | MCU reports `stm32h723xx`, which matches V2.0. **Check the board's silkscreen** |
-| ☐ | Gantry motors / slots | X, Y, Z×4 on 6 slots; pipette on a 7th; 1 spare | Config also has a `plate` stepper on the M8P (§3) |
-| ✓ | Run currents | X/Y 0.8 A; Z 0.65 A; pipette 0.65 A | X/Y 0.400, Z×4 0.40, pipette 0.650. **⛔ Differs: tell the owner** |
+| ☐ | Gantry motors / slots | X, Y, Z×4 on 6 slots; pipette on a 7th; 1 spare | Config also has a prototype `plate` stepper on the M8P, to be removed in the Path B merge (§3) |
+| ✓ | Run currents | X/Y 0.8 A; Z 0.65 A; pipette 0.65 A | X/Y 0.400, Z×4 0.40, pipette 0.650. Differs from the plan, but the owner confirmed it's intentional for marie's motors (2026-10-29) |
 | ✓ | Pipette endstop | `^!PB10` | `^!PB10`. **Matches** |
 | ✓ | Servo | MG996R on PE9 | `[servo pipette_servo] pin: PE9`. ☐ Check the model is MG996R |
 | ☐ | Servo supply 24 → 6 V converter rated current (≥ 3 A to reuse, D29) | | A |
@@ -68,9 +70,9 @@ As of 2026-09-24 marie's pipette hardware wasn't installed (`marie.md`). ☐ Con
 
 | ✓ | Item | Value |
 |---|---|---|
-| ✓ | Run currents match §4 | no (lower) |
+| ✓ | Run currents match §4 | no (lower, intentional) |
 | ☐ | PSU rating from its label | W |
-| ✓ | Recomputed typical / servo-stall peak | X/Y 2 × 2.5 W, Z 4 × 2.5 W, pipette 3.4 W, and the M8P `plate` stepper 2.5 W, plus the WP1 rows unchanged (six plates 33 W, logic 17 W, fans 10 W, servo 6 W, display 10 W). Total ≈ 97 W typical, ≈ 108 W at a servo stall. Against 200 W that's 48% / 54%, so it **passes**. If 0.4 A goes back to the plan's currents, the result is the same as nick's (≈ 100 / 115 W). ☐ Confirm once the PSU rating is read |
+| ✓ | Recomputed typical / servo-stall peak | X/Y 2 × 2.5 W, Z 4 × 2.5 W, pipette 3.4 W, plus the WP1 rows unchanged (six plates 33 W, logic 17 W, fans 10 W, servo 6 W, display 10 W). The M8P `plate` stepper is left out, since it's being removed. Total ≈ 95 W typical, ≈ 106 W at a servo stall. Against 200 W that's 47% / 53%, so it **passes**. ☐ Confirm once the PSU rating is read |
 
 ## 7. Cable lengths (route + 20%)
 
