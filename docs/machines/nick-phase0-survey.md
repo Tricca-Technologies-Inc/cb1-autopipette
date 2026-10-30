@@ -40,9 +40,9 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ✓ | Servo | MG996R on PE9 | `[servo pipette_servo] pin: PE9`. ☐ Check the model is MG996R |
 | ☐ | Servo supply 24 → 6 V converter rated current (≥ 3 A to reuse, D29) | | A |
 | ☐ | PSU label | 24 V, ≥ 200 W | V / W |
-| ☐ | E-stop cuts all machine power | | |
+| ✓ | E-stop cuts all machine power | | Yes (James, 2026-10-30) |
 | ☐ | Electronics in the top bay | | |
-| ☐ | Room in the top bay for the Octopus, fuse block and wiring | | |
+| ✓ | Room in the top bay for the Octopus, fuse block and wiring | | Room for the Octopus: yes. There's no DC fuse block today; the only fuse is in the mains plug. The F2 (5 A) branch fuse still has to be added (WP1 §4) |
 | ☐ | Octopus label and chip | "Octopus V1.1", STM32F446 (⛔ if F429) | |
 | ☐ | Octopus SD: copy `FIRMWARE.CUR`/`firmware.bin` off | | |
 | ☐ | Photos: M8P wiring, pipette head | | |
@@ -71,7 +71,7 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 
 ## 7. Cable lengths (route + 20%)
 
-☐ Drawers 1–6 motor / switch; ☐ CB1 → Octopus USB. The M8P → pipette head CAN run doesn't apply, because the EBB42 is deferred (D35).
+✓ The drawer cables have been cut to length (James, 2026-10-30); the lengths weren't recorded. The M8P → pipette head CAN run doesn't apply, because the EBB42 is deferred (D35).
 
 ## 8. Sign-off
 
