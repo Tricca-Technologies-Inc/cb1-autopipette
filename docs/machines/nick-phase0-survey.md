@@ -43,7 +43,7 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ✓ | E-stop cuts all machine power | | Yes (James, 2026-10-30) |
 | ☐ | Electronics in the top bay | | |
 | ✓ | Room in the top bay for the Octopus, fuse block and wiring | | Room for the Octopus: yes. There's no DC fuse block today; the only fuse is in the mains plug. The F2 (5 A) branch fuse still has to be added (WP1 §4) |
-| ☐ | Octopus label and chip | "Octopus V1.1", STM32F446 (⛔ if F429) | |
+| ✓ | Octopus label and chip | "Octopus V1.1", STM32F446 (⛔ if F429) | Label "Octopus V1.1", chip STM32F446ZET6 (photo, 2026-10-30). **Matches.** The board has its own blade fuses on MOTOR-POWER, POWER and BED-POWER |
 | ☐ | Octopus SD: copy `FIRMWARE.CUR`/`firmware.bin` off | | |
 | ☐ | Photos: M8P wiring, pipette head | | |
 
