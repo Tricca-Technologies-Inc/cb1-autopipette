@@ -39,7 +39,7 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ✓ | Pipette endstop | `^!PB10` | `^!PB10`. **Matches** |
 | ✓ | Servo | MG996R on PE9 | `[servo pipette_servo] pin: PE9`. ☐ Check the model is MG996R |
 | ☐ | Servo supply 24 → 6 V converter rated current (≥ 3 A to reuse, D29) | | A |
-| ☐ | PSU label | 24 V, ≥ 200 W | V / W |
+| ✓ | PSU label | 24 V, ≥ 200 W | Mean Well LRS-200-24: 24 V, 8.8 A (211 W). **Matches.** All three +V and all three −V terminals are already used |
 | ✓ | E-stop cuts all machine power | | Yes (James, 2026-10-30) |
 | ☐ | Electronics in the top bay | | |
 | ✓ | Room in the top bay for the Octopus, fuse block and wiring | | Room for the Octopus: yes. There's no DC fuse block today; the only fuse is in the mains plug. The F2 (5 A) branch fuse still has to be added (WP1 §4) |
@@ -66,8 +66,8 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ✓ | Item | Value |
 |---|---|---|
 | ✓ | Run currents match §4 | yes |
-| ☐ | PSU rating from its label | W |
-| ✓ | Typical / servo-stall peak | ≈ 100 W / ≈ 115 W, the same as WP1 §4 (currents match). Against 200 W that's 50% / 57.5%, so it **passes**, right at the 50% limit. The method slightly overestimates (A/B motors are 1.1 Ω). ☐ Confirm once the PSU rating is read |
+| ✓ | PSU rating from its label | 211 W (24 V × 8.8 A, LRS-200-24) |
+| ✓ | Typical / servo-stall peak | ≈ 100 W / ≈ 115 W, the same as WP1 §4 (currents match). Against the label's 211 W that's 47% / 54%, so it **passes** (limits: 50% typical, 70% peak). The method slightly overestimates (A/B motors are 1.1 Ω) |
 
 ## 7. Cable lengths (route + 20%)
 
