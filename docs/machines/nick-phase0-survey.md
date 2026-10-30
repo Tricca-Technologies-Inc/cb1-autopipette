@@ -33,7 +33,7 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 
 | ✓ | Item | Plan expects | Found |
 |---|---|---|---|
-| ☐ | Controller | Manta M8P **V2.0** + CB1 | MCU reports `stm32h723xx`, which matches V2.0. **Check the board's silkscreen** |
+| ✓ | Controller | Manta M8P **V2.0** + CB1 | Silkscreen "Manta M8P V2.0", CB1 V2.2 (H616) (photo, 2026-10-30). **Matches** |
 | ☐ | Gantry motors / slots | X, Y, Z×4 on 6 slots; pipette on a 7th; 1 spare | |
 | ✓ | Run currents | X/Y 0.8 A; Z 0.65 A; pipette 0.65 A | X/Y 0.800, Z×4 0.650, pipette 0.650. **Matches** |
 | ✓ | Pipette endstop | `^!PB10` | `^!PB10`. **Matches** |
@@ -45,7 +45,7 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ✓ | Room in the top bay for the Octopus, fuse block and wiring | | Room for the Octopus: yes. There's no DC fuse block today; the only fuse is in the mains plug. The F2 (5 A) branch fuse still has to be added (WP1 §4) |
 | ✓ | Octopus label and chip | "Octopus V1.1", STM32F446 (⛔ if F429) | Label "Octopus V1.1", chip STM32F446ZET6 (photo, 2026-10-30). **Matches.** The board has its own blade fuses on MOTOR-POWER, POWER and BED-POWER |
 | ☐ | Octopus SD: copy `FIRMWARE.CUR`/`firmware.bin` off | | |
-| ☐ | Photos: M8P wiring, pipette head | | |
+| ✓ | Photos: M8P wiring, pipette head | | M8P wiring photographed 2026-10-30 (James). Pipette head deferred along with §5. Mains goes through an AC contactor (Baomain BCT-63/20) beside the M8P |
 
 ## 5. Pipette reference
 
