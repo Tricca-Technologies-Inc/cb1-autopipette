@@ -35,6 +35,12 @@ cmd2.overridePythonAttrs (old: rec {
   # (3.0.52 vs >=3.0.53); no functional gap between those two.
   pythonRelaxDeps = [ "prompt-toolkit" ];
 
+  # Timing-dependent: it checks whether a background alert redrew the
+  # prompt, which races on loaded CI runners. It failed CI on two
+  # unrelated PRs (#70, #71) with the same cmd2 build that passed
+  # elsewhere. Only cmd2's own suite; tricca's code doesn't use async_alert.
+  disabledTests = (old.disabledTests or [ ]) ++ [ "test_async_alert" ];
+
   dependencies = [
     prompt-toolkit
     pyperclip
