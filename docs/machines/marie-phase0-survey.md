@@ -54,6 +54,8 @@ The full merged diff still needs the owner's approval before it's applied (RB1 �
 
 ## 5. Pipette reference
 
+**Deferred by the owner (2026-10-30):** no pipetting checks for now, to get the plate axes working first. §5.1, 5.2, 5.4, 5.5 and D46 are skipped until then. `home_dir` already defaults to +1 (D48). Without these baselines, Phase 8's pipette regressions (M-01, M-12, M-14) have nothing to compare against.
+
 As of 2026-09-24 marie's pipette hardware wasn't installed (`marie.md`). ☐ Confirm whether it is now. If not, §5 waits.
 
 | ✓ | Item | Value |
