@@ -37,8 +37,8 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ☐ | Gantry motors / slots | X, Y, Z×4 on 6 slots; pipette on a 7th; 1 spare | |
 | ✓ | Run currents | X/Y 0.8 A; Z 0.65 A; pipette 0.65 A | X/Y 0.800, Z×4 0.650, pipette 0.650. **Matches** |
 | ✓ | Pipette endstop | `^!PB10` | `^!PB10`. **Matches** |
-| ✓ | Servo | MG996R on PE9 | `[servo pipette_servo] pin: PE9`. ☐ Check the model is MG996R |
-| ☐ | Servo supply 24 → 6 V converter rated current (≥ 3 A to reuse, D29) | | A |
+| ✓ | Servo | MG996R on PE9 | `[servo pipette_servo] pin: PE9`. MG996R (James, 2026-10-30). **Matches** |
+| ✓ | Servo supply 24 → 6 V converter rated current (≥ 3 A to reuse, D29) | | 12/24 V in, 6 V out, 10 A max (label, photo 2026-10-30). **Reusable** (≥ 3 A) |
 | ✓ | PSU label | 24 V, ≥ 200 W | Mean Well LRS-200-24: 24 V, 8.8 A (211 W). **Matches.** All three +V and all three −V terminals are already used |
 | ✓ | E-stop cuts all machine power | | Yes (James, 2026-10-30) |
 | ☐ | Electronics in the top bay | | |
