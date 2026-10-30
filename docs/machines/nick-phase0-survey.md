@@ -73,6 +73,8 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 
 - ✓ The TMC2209 jumpers are set for UART mode. No BOOT0 jumper, no DIAG jumpers (James, 2026-10-30).
 - ✓ E-01: power is good, and the machine powered on with no issues (James, 2026-10-30).
+- **Two Octopus V1.1 boards failed (2026-10-30).** Neither took the SD flash (`firmware.bin` was never renamed). Neither showed up on USB, even in BOOT0/ROM DFU mode with RESET held 5 s, tested with known-good A-to-C cables on nick and on the workstation. The second board's heater LEDs lit at power-on with STATUS dark, which suggests its MCU wasn't running. Both were set aside.
+- ✓ **A third Octopus V1.1 (STM32F446ZET6)** took the SD flash and enumerates as `Klipper stm32f446xx` on the workstation (2026-10-30). Its heater LEDs stay off and STATUS is lit. This is the board going on nick.
 
 ## 7. Cable lengths (route + 20%)
 
