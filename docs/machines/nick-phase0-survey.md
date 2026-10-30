@@ -69,6 +69,11 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 | ✓ | PSU rating from its label | 211 W (24 V × 8.8 A, LRS-200-24) |
 | ✓ | Typical / servo-stall peak | ≈ 100 W / ≈ 115 W, the same as WP1 §4 (currents match). Against the label's 211 W that's 47% / 54%, so it **passes** (limits: 50% typical, 70% peak). The method slightly overestimates (A/B motors are 1.1 Ω) |
 
+## Octopus bench prep and install (WP1 §8 / Phase 6)
+
+- ✓ The TMC2209 jumpers are set for UART mode. No BOOT0 jumper, no DIAG jumpers (James, 2026-10-30).
+- ✓ E-01: power is good, and the machine powered on with no issues (James, 2026-10-30).
+
 ## 7. Cable lengths (route + 20%)
 
 ✓ The drawer cables have been cut to length (James, 2026-10-30); the lengths weren't recorded. The M8P → pipette head CAN run doesn't apply, because the EBB42 is deferred (D35).
