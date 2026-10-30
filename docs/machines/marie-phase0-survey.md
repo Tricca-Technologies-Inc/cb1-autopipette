@@ -29,7 +29,7 @@ Survey form `docs/plans/axis-expansion/phase0-survey.md` (Tricca_AutoPipette, Re
 
 **Owner decisions for the Path B merge (James, 2026-10-29):**
 1. **`[manual_stepper plate]` and `[tmc2209 manual_stepper plate]` on the M8P: remove.** CFG-1's six Octopus plates replace this prototype drawer drive.
-2. **`[output_pin n2_valve]` on PF7: keep.** It doesn't conflict with CFG-1. Add it to the system config's `trigger_pins` if tapd's `trigger` command should drive it.
+2. **`[output_pin n2_valve]` on PF7: keep.** It doesn't conflict with CFG-1. Added to marie's system config on 2026-10-30 as trigger channel `n2` (`trigger_pins: {"n2": "n2_valve"}`) with tapd's `set_config`. `trigger n2 off` is accepted.
 3. **Run currents of 0.4 A: intentional** for marie's motors. Keep them, along with the inverted X/Y endstops.
 
 The full merged diff still needs the owner's approval before it's applied (RB1 §3 step 3).
