@@ -1,5 +1,15 @@
 # marie
 
+## Current status (2026-10-30)
+
+- cb1 `86dfe25` (pre-stage-1), Armbian 26.8.3, kernel 6.18.44, Determinate Nix 3.24.1. Healthy.
+- **#29 migration finished 2026-10-29:** `rotation_distance: 8` was still in place, despite the 2026-10-02 incident saying otherwise. Changed to 2, and the liquid JSONs were updated.
+- `n2_valve` is trigger channel `n2` (`trigger_pins`).
+- **Axis expansion:** Phase 0 is partly done ([survey](marie-phase0-survey.md)). Path B hand merge, with the owner's decisions recorded. No Octopus yet.
+- **Network:** `JamesPhoneNet` (10.42.97.16 or 10.191.173.16). Its wifi priority hasn't been pinned like nick's yet, so it may hop networks.
+
+## History
+
 **2026-09-23 — reinstalled from scratch, running current `main`.**
 Armbian 26.8.1 trixie, kernel 6.18.43-current-sunxi64, bootstrapped via
 bootstrap.sh + prime.sh. Full story, including three bootstrap gotchas
