@@ -76,6 +76,11 @@ For rollback, keep in mind that the board isn't running a `mantaFirmware` image 
 - **Two Octopus V1.1 boards failed (2026-10-30).** Neither took the SD flash (`firmware.bin` was never renamed). Neither showed up on USB, even in BOOT0/ROM DFU mode with RESET held 5 s, tested with known-good A-to-C cables on nick and on the workstation. The second board's heater LEDs lit at power-on with STATUS dark, which suggests its MCU wasn't running. Both were set aside.
 - ✓ **A third Octopus V1.1 (STM32F446ZET6)** took the SD flash and enumerates as `Klipper stm32f446xx` on the workstation (2026-10-30). Its heater LEDs stay off and STATUS is lit. This is the board going on nick.
 
+## After Phase 0 (2026-10-30)
+
+- ✓ Stage 1 deployed and re-seeded (Path A). Klipper is `ready` with the Octopus. See `nick.md`.
+- ☐ E-05: all six plate switches read `TRIGGERED` at the first query. Check them one drawer at a time.
+
 ## 7. Cable lengths (route + 20%)
 
 ✓ The drawer cables have been cut to length (James, 2026-10-30); the lengths weren't recorded. The M8P → pipette head CAN run doesn't apply, because the EBB42 is deferred (D35).

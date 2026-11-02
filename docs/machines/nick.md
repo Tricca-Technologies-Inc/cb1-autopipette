@@ -1,5 +1,19 @@
 # nick
 
+## Current status (2026-10-30)
+
+- **Stage 1 deployed and Klipper re-seeded (Path A).** cb1 `88a788a` (tricca-src `713d730`, printer-cfgs `6681d79`), system-manager generation 6. Armbian 26.8.3, kernel 6.18.44, Determinate Nix 3.24.1.
+  - The post-switch health check passes.
+  - Klipper is `ready` with `mcu` (the M8P), `CB1` and **`octopus`** (Octopus V1.1, our pinned build).
+  - tapd sees `plate1`–`plate6` (U V W A B C, 0–350 mm, tip-safe at 0 and 350) and plunger axis P (stage 1).
+  - Backups: `/root/moonraker-config-20261029-180642.tgz` (Phase 0) and `/root/moonraker-config-20261030-171721-pre-stage1.tgz` (just before the re-seed).
+- **Octopus:** the third board tried. The first two never took an SD flash or showed up on USB, even in ROM DFU mode, and were set aside. See the [Phase 0 survey](nick-phase0-survey.md).
+- **Next:** E-05. All six plate switches read `TRIGGERED` at the first `QUERY_ENDSTOPS`. Either the drawers are pressing their switches, or the switches aren't wired yet. Check one drawer at a time, then home (Z, then plates) and find per-machine `z_safe`, travel and tip-safe stops.
+- **#29 migration done 2026-10-28** (pipette/liquid JSONs and `rotation_distance: 2`). Gravimetric re-check deferred with the Phase 0 pipetting checks.
+- **Network:** wifi `JamesPhoneNet` (priority 10, currently 10.42.97.60), with `NETGEAR12` as fallback. It has also been at 10.191.173.60.
+
+## History
+
 **2026-09-08 — RUNNING for the first time since generation 8.** SD card
 replaced (12-15x faster sequential write), ethernet fixed for the first
 time ever (Armbian PR #10155, needs kernel ≥6.18), and — after the same
