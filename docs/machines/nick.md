@@ -1,6 +1,6 @@
 # nick
 
-## Current status (2026-10-30)
+## Current status (2026-11-04)
 
 - **Stage 1 deployed and Klipper re-seeded (Path A).** cb1 `88a788a` (tricca-src `713d730`, printer-cfgs `6681d79`), system-manager generation 6. Armbian 26.8.3, kernel 6.18.44, Determinate Nix 3.24.1.
   - The post-switch health check passes.
@@ -8,7 +8,13 @@
   - tapd sees `plate1`–`plate6` (U V W A B C, 0–350 mm, tip-safe at 0 and 350) and plunger axis P (stage 1).
   - Backups: `/root/moonraker-config-20261029-180642.tgz` (Phase 0) and `/root/moonraker-config-20261030-171721-pre-stage1.tgz` (just before the re-seed).
 - **Octopus:** the third board tried. The first two never took an SD flash or showed up on USB, even in ROM DFU mode, and were set aside. See the [Phase 0 survey](nick-phase0-survey.md).
-- **Next:** E-05. All six plate switches read `TRIGGERED` at the first `QUERY_ENDSTOPS`. Either the drawers are pressing their switches, or the switches aren't wired yet. Check one drawer at a time, then home (Z, then plates) and find per-machine `z_safe`, travel and tip-safe stops.
+- **Plates 4–6 commissioned 2026-11-03** (drawers, motors and NC home switches fitted). Plates 1–3 are waiting on parts; with no switch fitted they read `TRIGGERED`.
+  - E-05: each switch toggles only its own entry (`open` released, `TRIGGERED` pressed). E-11: hard stops catch the drawer past 0 and 350 with no collisions. E-06: `STEPPER_BUZZ` moves the right drawer. `G28 Z`, then `G28 A`, `G28 B`, `G28 C` each home cleanly.
+  - Travel: `PLATE_MOVE` to 50 and 350 mm measured 50 and 350 by hand on each plate.
+  - The drawer pulleys are GT2 **16T**, not 20T (addendum D51). nick's `octopus-plates.cfg` was edited live to `rotation_distance: 32` for all six plates; with 40, a commanded 50 mm moved 40 mm. The Configs default is now 32 too.
+  - `stepper_z3` read `TRIGGERED` with nothing pressed; James fixed the z3 switch wiring, and it now reads `open`.
+  - The Octopus home inputs are the headers labelled DIAG3/DIAG4/DIAG5 for plates 4/5/6 (5V / GND / signal; switch on GND and signal). Every DIAG jumper is removed.
+- **Next:** plates 1–3 when the parts arrive, the same checks. Then measure the named drawer stops (pipetting and valve positions), write the tapd `drawers` block and make `_PLATE_CFG.safe_stops` match its pipetting stops. `z_safe` stays 0 (fully raised) for now, by owner choice.
 - **#29 migration done 2026-10-28** (pipette/liquid JSONs and `rotation_distance: 2`). Gravimetric re-check deferred with the Phase 0 pipetting checks.
 - **Network:** wifi `JamesPhoneNet` (priority 10, currently 10.42.97.60), with `NETGEAR12` as fallback. It has also been at 10.191.173.60.
 
@@ -140,27 +146,27 @@ run the equivalent command by hand with the same flags.
 
 ## Axis expansion
 
-Not started. Template and rules: [README.md](README.md#axis-expansion-record-template).
+In progress (stage 1). Template and rules: [README.md](README.md#axis-expansion-record-template).
 No MCU serial IDs in this file: they live only in this machine's
 printer.cfg and its backup tarball.
 
-- Phase 0 survey: —
-- Migration path: —
-- Backup tarball: —
+- Phase 0 survey: [nick-phase0-survey.md](nick-phase0-survey.md), 2026-10-29/30; pipetting checks (§5) deferred by the owner
+- Migration path: A (re-seed), 2026-10-30
+- Backup tarball: `/root/moonraker-config-20261030-171721-pre-stage1.tgz` (Phase 0: `/root/moonraker-config-20261029-180642.tgz`)
 - Previous M8P firmware (rollback): —
 - Firmware SHA-256:
   - M8P (`mantaFirmware`, USB): —
-  - Octopus V1.1 F446 (`octopusFirmware`): —
-- `_PLATE_CFG.z_safe`: —
-- Drawer travel (`position_max`): —
+  - Octopus V1.1 F446 (`octopusFirmware`): `5e585bf3ac7d15b1c60cc6c7ca3621e2e6db24ff94bdc365ce10e79c15bf39bf`
+- `_PLATE_CFG.z_safe`: 0 (default, kept by owner choice 2026-11-03)
+- Drawer travel (`position_max`): 350 (measured on plates 4–6); `rotation_distance: 32` (16T pulleys)
 - Tip-safe stops (`_PLATE_CFG`, per plate):
   - plate1 (U): —
   - plate2 (V): —
   - plate3 (W): —
-  - plate4 (A): —
-  - plate5 (B): —
-  - plate6 (C): —
-- `_PIPETTE_CFG.home_dir`: —
-- Powered checks (RB1 §3.7): —
+  - plate4 (A): `[0, 350]` (default; named stops not yet measured)
+  - plate5 (B): `[0, 350]` (default; named stops not yet measured)
+  - plate6 (C): `[0, 350]` (default; named stops not yet measured)
+- `_PIPETTE_CFG.home_dir`: +1 (D48 default; §5.2 check deferred)
+- Powered checks (RB1 §3.7): E-05, E-06, E-11 pass for plates 4–6 (2026-11-03); plates 1–3, E-08, E-10, E-12 not yet run
 - Commissioning tests M-01…M-19, M-23: —
 - Stage 2 deployed: —
