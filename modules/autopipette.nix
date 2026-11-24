@@ -39,7 +39,6 @@ in
       '';
       serviceConfig = {
         User = user;
-        Environment = [ "AUTOPIPETTE_PROTOCOLS_DIR=/var/lib/autopipette/protocols" ];
         ExecStart = "${triccaEnv}/bin/uvicorn autopipette_kiosk.main:app --host 127.0.0.1 --port ${toString port}";
         WorkingDirectory = "/var/lib/autopipette";
         Restart = "always";
