@@ -56,6 +56,8 @@ EOF
 cat >"$WORK/bin/sleep" <<'EOF'
 #!/usr/bin/env bash
 EOF
+# The build sandbox has no /usr/bin/env, so point the fakes at this bash.
+sed -i "1s|.*|#!$BASH|" "$WORK/bin"/*
 chmod +x "$WORK/bin"/*
 
 failures=0
