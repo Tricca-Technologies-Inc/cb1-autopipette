@@ -81,6 +81,18 @@ splash retained until Chromium paints. Mainsail on port 80.
 
 ## Day-2 operations — shell helpers
 
+`tap`, tapd's interactive shell, runs by name from SSH and from every
+console, and takes commands on stdin as well as interactively:
+
+```sh
+ssh tricca@<rig> tap                               # interactive
+printf 'ls system\nquit\n' | ssh tricca@<rig> tap   # scripted
+```
+
+It's a real binary from `modules/tricca-console.nix`, not one of the
+helpers below, and it's also linked at `/usr/local/bin/tap` so a
+non-login `ssh <rig> <command>` finds it.
+
 Defined in `modules/aliases.nix`, landed at `/etc/profile.d/tricca-aliases.sh`
 on every machine (log out/in after the first switch to pick them up):
 

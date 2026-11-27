@@ -31,3 +31,36 @@ process keeps running with the old PATH until something restarts it.
 
 If a new module calls out to any binary that isn't a Nix derivation output
 directly, check this first before assuming the config itself is wrong.
+
+## Related: system-manager's PATH only reaches login shells (2026-11-27)
+
+Same family, from the other side: not a unit's PATH, but an SSH command's.
+Found while reviewing PR #84 (issue #74, `tap` on PATH), by reading the
+pinned system-manager source rather than on a rig.
+
+system-manager puts `environment.systemPackages` in
+`/run/system-manager/sw/bin` and adds that to PATH in exactly two places
+(`nix/modules/environment.nix`):
+
+- `/etc/profile.d/system-manager-path.sh`, read only by login shells;
+- `/etc/environment.d/10-system-manager.conf`, read only by systemd user
+  sessions.
+
+`ssh tricca@<rig> tap` runs a non-login, non-interactive `bash -c`. Debian's
+bash does read `~/.bashrc` for SSH commands, but the stock `.bashrc` returns
+immediately when the shell isn't interactive. So the command gets sshd's
+default PATH (`/usr/local/bin:/usr/bin:/bin:...`) and fails with
+`bash: tap: command not found`. This applies to every Nix-provided binary
+(`gpiodetect`, `htop`, ...), not just `tap`. `ssh <rig>` followed by typing
+the command works, because that shell is a login shell.
+
+Fix used for `tap`: a tmpfiles rule,
+`L+ /usr/local/bin/tap - - - - /run/system-manager/sw/bin/tap`, in
+`modules/tricca-console.nix`. system-manager's activation runs
+`systemd-tmpfiles --create`, so the link appears on the first switch.
+Pointing it at the profile path rather than a store path means it follows
+every later switch without changing.
+
+**Still to confirm on nick:** `ssh tricca@nick 'command -v gpiodetect'`
+printing nothing before the switch, and `ssh tricca@nick 'command -v tap'`
+printing `/usr/local/bin/tap` after it (PR #84's rig checklist).
