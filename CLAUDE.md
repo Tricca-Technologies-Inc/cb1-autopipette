@@ -23,7 +23,8 @@ built it doubles as design history, and README.md is the operator doc.
   `systemConfigs."<hostname>"`). See
   [ADR-0001](docs/adr/0001-apt-vs-nix-boundary.md).
 - Services: klipper-mcu (host MCU, same pinned src as klippy), klipper,
-  moonraker, mainsail-nginx (:80), tapd (control daemon, owns the
+  moonraker, mainsail-nginx (:80, also proxies the deck camera at
+  /webcam/), webcam (ustreamer, only on rigs with a camera), tapd (control daemon, owns the
   Moonraker connection), autopipette (:8000, thin kiosk client of tapd's
   control-plane websocket), kiosk, plus /etc files and shell helpers.
 - tapd (from tricca-src) is a long-running control daemon holding the

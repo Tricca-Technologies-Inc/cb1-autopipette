@@ -37,6 +37,13 @@ let
           proxy_set_header X-Real-IP $remote_addr;
           proxy_read_timeout 600s;
         }
+        # Deck camera (modules/webcam.nix). Buffering off, or nginx holds
+        # MJPEG frames back and the stream stutters.
+        location /webcam/ {
+          proxy_pass http://127.0.0.1:8080/;
+          proxy_buffering off;
+          proxy_read_timeout 600s;
+        }
       }
     }
   '';
