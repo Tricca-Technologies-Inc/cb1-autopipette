@@ -64,3 +64,41 @@ every later switch without changing.
 **Still to confirm on nick:** `ssh tricca@nick 'command -v gpiodetect'`
 printing nothing before the switch, and `ssh tricca@nick 'command -v tap'`
 printing `/usr/local/bin/tap` after it (PR #84's rig checklist).
+
+## Related: system-manager owns root's login shell (2026-11-27, issue #85)
+
+Found right after the `tap` PATH finding, while working out why `bash` and
+`sh` were in the system profile. Confirmed by evaluating
+`systemConfigs.default` and reading the pinned system-manager and userborn
+sources; the rig state was not checked.
+
+- system-manager imports NixOS's `users-groups` module, which declares
+  `root` (shell `users.defaultUserShell = pkgs.bashInteractive`) and
+  `nobody` (shell: a `nologin` package), and enables userborn by default.
+- Userborn's generated config gave root
+  `/run/system-manager/sw/bin/bash` and nobody
+  `/run/system-manager/sw/bin/nologin`. In mutable mode userborn still
+  updates an existing user's shell, home and description
+  (`update_user` in userborn's `src/main.rs`), so a switch rewrites
+  Armbian's own entries.
+- That shell path lives on a tmpfs and only exists after system-manager's
+  activation has run on this boot. If activation fails, or on a rescue
+  boot, root has no working login shell: console login, `sudo -i` (which
+  the `switch` helper uses) and `su -` all fail.
+- The module also installs every user shell that is a package, which put
+  `bash`, `sh` and `nologin` in `/run/system-manager/sw/bin`, ahead of
+  Armbian's `/bin/bash` and `/bin/sh` (dash) in every login shell.
+
+Fix (`modules/base.nix`): `users.users.root.shell = "/bin/bash"` and
+`users.users.nobody.shell = "/usr/sbin/nologin"`, as path strings. Userborn
+writes those on the next switch, which also repairs rigs it already
+changed, and string shells aren't installed as packages.
+`checks.system-shells` asserts both values and that the profile has no
+`bin/bash`, `bin/sh` or `bin/nologin`.
+
+Not changed: userborn also sets root's description to "System
+administrator" and nobody's home to `/var/empty` (Debian: `root` and
+`/nonexistent`). Both are harmless.
+
+**Still to confirm on nick:** `getent passwd root nobody` before the switch
+(does root actually have the Nix bash?), and after it.

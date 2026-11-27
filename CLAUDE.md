@@ -184,6 +184,13 @@ built it doubles as design history, and README.md is the operator doc.
     work as a one-shot SSH command needs a `/usr/local/bin` link (tmpfiles
     `L+`, as `tap` does in modules/tricca-console.nix). See
     [docs/incidents/nix-store-path-gaps.md](docs/incidents/nix-store-path-gaps.md).
+13. system-manager edits `/etc/passwd` even though no module declares a
+    user: its NixOS users-groups module declares `root` and `nobody`, and
+    userborn rewrites their shell/home/description on EVERY switch,
+    existing entries included. Any user shell given as a package also
+    lands in the system profile, first on PATH. Give shells as Debian path
+    strings (`users.users.root.shell = "/bin/bash"`, modules/base.nix,
+    issue #85); `checks.system-shells` enforces it.
 
 ## Machine status
 
