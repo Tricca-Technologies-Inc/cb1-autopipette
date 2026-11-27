@@ -41,8 +41,9 @@ built it doubles as design history, and README.md is the operator doc.
   control if the kiosk (tty1) is misbehaving. Ctrl+Alt+F3..F6 (tty3-tty6)
   land in a normal shell instead, so `tap` can run on tty2 while
   journalctl/htop/etc. run alongside it on another VT. `tap` is also on
-  every shell's PATH (SSH included) as the one-binary `tapCli` wrapper in
-  flake.nix, never `triccaEnv` itself (issue #74). See
+  every shell's PATH as the one-binary `tapCli` wrapper in flake.nix,
+  never `triccaEnv` itself, plus a `/usr/local/bin/tap` link for
+  non-login `ssh <rig> tap` (issue #74, hard-won rule 12). See
   [ADR-0003](docs/adr/0003-tty2-debug-console-without-passwd-change.md).
 - Board firmware drifts from the host's pinned Klipper version over time
   ("MCU has deprecated code" warnings) since it's flashed once and never
@@ -176,6 +177,12 @@ built it doubles as design history, and README.md is the operator doc.
     `isInGroup()` — use the `/proc/<pid>/status`-grep technique instead
     (see Moonraker's own `scripts/set-policykit-rules.sh` for the pattern
     modules/moonraker.nix now follows).
+12. `environment.systemPackages` only reaches LOGIN shells: system-manager
+    adds `/run/system-manager/sw/bin` to PATH from `/etc/profile.d`, which
+    a non-interactive `ssh <rig> <command>` never reads. Anything that must
+    work as a one-shot SSH command needs a `/usr/local/bin` link (tmpfiles
+    `L+`, as `tap` does in modules/tricca-console.nix). See
+    [docs/incidents/nix-store-path-gaps.md](docs/incidents/nix-store-path-gaps.md).
 
 ## Machine status
 

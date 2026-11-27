@@ -22,7 +22,8 @@
 # not forced into tap or autologin.
 #
 # `tap` itself is on every shell's PATH too (issue #74), so SSH sessions and
-# tty3-tty6 can run it by name, and scripts can pipe commands into it. It's
+# tty3-tty6 can run it by name, and scripts can pipe commands into it
+# (`ssh tricca@<rig> tap` included, via /usr/local/bin/tap below). It's
 # the one-binary tapCli wrapper (flake.nix), never triccaEnv, whose python3
 # would shadow Armbian's. tty2 execs the same wrapper.
 { tapCli, ... }:
@@ -39,6 +40,13 @@ in
 {
   config = {
     environment.systemPackages = [ tapCli ];
+    # systemPackages alone only reaches login shells: system-manager adds
+    # /run/system-manager/sw/bin to PATH from /etc/profile.d, which a
+    # non-interactive `ssh tricca@<rig> tap` (bash -c, non-login) never
+    # reads. /usr/local/bin is on sshd's default PATH, so link tap there
+    # too. Points at the profile, not the store path, so it follows each
+    # switch; activation re-runs systemd-tmpfiles --create.
+    systemd.tmpfiles.rules = [ "L+ /usr/local/bin/tap - - - - /run/system-manager/sw/bin/tap" ];
 
     environment.etc."profile.d/tricca-console.sh".text = ''
       # Physical-console-only auto-tap (modules/tricca-console.nix). SSH

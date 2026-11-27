@@ -21,6 +21,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       system-manager,
       tricca-src,
@@ -272,9 +273,16 @@
         '';
         # tapCli puts exactly one binary on PATH (issue #74): adding
         # triccaEnv to systemPackages instead would shadow the system
-        # python3. Also pins the env var tap needs outside a checkout.
+        # python3. Also pins the env var tap needs outside a checkout, and
+        # checks the whole system profile (not just tapCli) for python3,
+        # so a triccaEnv added to systemPackages anywhere else fails too.
         tap-path = pkgs.runCommand "tap-path" { } ''
           fail() { echo "FAIL: $*" >&2; exit 1; }
+          sw=${self.systemConfigs.default.config.system.path}
+          [ -e "$sw/bin/tap" ] || fail "system profile has no bin/tap"
+          for py in python python3 uvicorn; do
+            [ ! -e "$sw/bin/$py" ] || fail "system profile has bin/$py: it would shadow Armbian's"
+          done
           [ "$(ls ${tapCli}/bin)" = tap ] || fail "bin/ holds more than tap: $(ls ${tapCli}/bin)"
           grep -qx 'export AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette' ${tapCli}/bin/tap \
             || fail "AUTOPIPETTE_REPO_ROOT not set"
