@@ -85,6 +85,10 @@ Defined in `modules/aliases.nix`, landed at `/etc/profile.d/tricca-aliases.sh`
 on every machine (log out/in after the first switch to pick them up):
 
 - `switch` — apply the flake to this machine (the only deploy command)
+- `tap` — tapd's interactive shell, by name from SSH or any console (not
+  from `modules/aliases.nix`: it's a real binary from
+  `modules/tricca-console.nix`). Takes commands on stdin too:
+  `printf 'ls system\nquit\n' | tap`
 - `splash-preview [secs]` — stop kiosk, show the splash, restore the kiosk
 - `ap-status` — status of the whole stack
 - `logs [unit]` — follow a unit's journal (default: autopipette)

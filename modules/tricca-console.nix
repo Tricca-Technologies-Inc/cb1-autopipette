@@ -20,16 +20,13 @@
 # "getty@tty1.service" ]`); if the kiosk ever dies and getty@tty1 comes back
 # up, that login is deliberately left as a normal shell (recovery path),
 # not forced into tap or autologin.
-{ pkgs, triccaEnv, ... }:
+#
+# `tap` itself is on every shell's PATH too (issue #74), so SSH sessions and
+# tty3-tty6 can run it by name, and scripts can pipe commands into it. It's
+# the one-binary tapCli wrapper (flake.nix), never triccaEnv, whose python3
+# would shadow Armbian's. tty2 execs the same wrapper.
+{ tapCli, ... }:
 let
-  # DIR_REPO_ROOT's src-layout assumption breaks for any installed package
-  # (see README field notes / modules/tapd.nix) -- applies to `tap` too,
-  # not just tapd.
-  tapConsole = pkgs.writeShellScript "tap-console" ''
-    export AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette
-    exec ${triccaEnv}/bin/tap
-  '';
-
   # Same no-password autologin line for every debug-console tty (tty2-tty6);
   # what tty2 does differently (exec tap) lives in the profile.d script
   # below, not here.
@@ -41,6 +38,8 @@ let
 in
 {
   config = {
+    environment.systemPackages = [ tapCli ];
+
     environment.etc."profile.d/tricca-console.sh".text = ''
       # Physical-console-only auto-tap (modules/tricca-console.nix). SSH
       # sessions (pts/N) never match this, only a local tty2 VT login does.
@@ -48,7 +47,7 @@ in
       # through here into tricca's normal shell.
       if [ "$(id -un)" = tricca ]; then
         case "$(tty 2>/dev/null)" in
-          /dev/tty2) exec ${tapConsole} ;;
+          /dev/tty2) exec ${tapCli}/bin/tap ;;
         esac
       fi
     '';

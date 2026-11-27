@@ -37,6 +37,17 @@
         tricca-autopipette
         ps.uvicorn
       ]);
+      # `tap` on every shell's PATH (issue #74): one binary, not triccaEnv
+      # itself, whose python3/uvicorn would shadow Armbian's for everyone.
+      # The single entry point for tty2 (modules/tricca-console.nix) and
+      # SSH alike, so the env below can't drift between two copies.
+      # AUTOPIPETTE_REPO_ROOT: tricca_autopipette's path defaults assume a
+      # src-layout checkout, which breaks for an installed package (see
+      # modules/tapd.nix) -- applies to `tap` too, not just tapd.
+      tapCli = pkgs.writeShellScriptBin "tap" ''
+        export AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette
+        exec ${triccaEnv}/bin/tap "$@"
+      '';
       # nixpkgs' klipper-firmware, made reproducible. Klipper stamps a version
       # string into every image (klipper.bin's embedded data dictionary).
       # Outside a git checkout -- always the case under Nix -- it falls back
@@ -232,6 +243,7 @@
           inherit
             tricca-autopipette
             triccaEnv
+            tapCli
             tricca-src
             printer-cfgs
             klipperHostMcu
@@ -256,6 +268,18 @@
           assert version("aiohttp") == "3.14.5", version("aiohttp")
           assert version("yarl") == "1.25.1", version("yarl")
           '
+          touch $out
+        '';
+        # tapCli puts exactly one binary on PATH (issue #74): adding
+        # triccaEnv to systemPackages instead would shadow the system
+        # python3. Also pins the env var tap needs outside a checkout.
+        tap-path = pkgs.runCommand "tap-path" { } ''
+          fail() { echo "FAIL: $*" >&2; exit 1; }
+          [ "$(ls ${tapCli}/bin)" = tap ] || fail "bin/ holds more than tap: $(ls ${tapCli}/bin)"
+          grep -qx 'export AUTOPIPETTE_REPO_ROOT=/var/lib/autopipette' ${tapCli}/bin/tap \
+            || fail "AUTOPIPETTE_REPO_ROOT not set"
+          grep -q '^exec ${triccaEnv}/bin/tap "\$@"$' ${tapCli}/bin/tap || fail "arguments not passed through"
+          [ -x ${triccaEnv}/bin/tap ] || fail "triccaEnv has no tap"
           touch $out
         '';
         # Board firmware images, built by CI's `nix flake check` directly

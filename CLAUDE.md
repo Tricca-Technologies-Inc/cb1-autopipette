@@ -40,7 +40,9 @@ built it doubles as design history, and README.md is the operator doc.
   (tty2) execs `tap` instead of a normal shell — a fast path back to
   control if the kiosk (tty1) is misbehaving. Ctrl+Alt+F3..F6 (tty3-tty6)
   land in a normal shell instead, so `tap` can run on tty2 while
-  journalctl/htop/etc. run alongside it on another VT. See
+  journalctl/htop/etc. run alongside it on another VT. `tap` is also on
+  every shell's PATH (SSH included) as the one-binary `tapCli` wrapper in
+  flake.nix, never `triccaEnv` itself (issue #74). See
   [ADR-0003](docs/adr/0003-tty2-debug-console-without-passwd-change.md).
 - Board firmware drifts from the host's pinned Klipper version over time
   ("MCU has deprecated code" warnings) since it's flashed once and never
