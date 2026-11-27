@@ -10,6 +10,7 @@
   ioTuningApply,
   switchHealthSampler,
   switchHealthCheck,
+  webcamTool,
   ...
 }:
 let
@@ -143,6 +144,12 @@ in
       # Status of the whole AutoPipette stack
       ap-status() {
         systemctl status klipper-mcu klipper moonraker autopipette kiosk mainsail-nginx --no-pager -l
+      }
+
+      # Deck camera (issue #81): `webcam setup [device]`, `webcam status`,
+      # `webcam off`. See scripts/webcam.sh.
+      webcam() {
+        sudo ${webcamTool} "$@"
       }
 
       # Follow logs for one service (default: autopipette)
