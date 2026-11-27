@@ -169,11 +169,11 @@
     "tricca-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1795802829,
-        "narHash": "sha256-ArohxVBeDPmXpJ+E4Vpey8gALm2066QaotKuijUY7c0=",
+        "lastModified": 1795821255,
+        "narHash": "sha256-hzZWiwuKyrxg+z4VDiLl/9Dj+Trtnpehynq6FpM3Kj4=",
         "owner": "Tricca-Technologies-Inc",
         "repo": "Tricca_AutoPipette",
-        "rev": "bf54495b811c45d92debf026de0a4051b37a6694",
+        "rev": "094595a9d09e0464bd277cccda2645201e92b1f2",
         "type": "github"
       },
       "original": {
