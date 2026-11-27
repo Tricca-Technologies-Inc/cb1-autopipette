@@ -77,6 +77,12 @@ let
       # (Same failure class as moonraker needing iproute2 on its path.)
       /usr/bin/plymouth quit --retain-splash || true
     fi
+    # Drop Chromium's HTTP cache so a switch can't leave the kiosk on old
+    # UI files: pages cached before the backend sent Cache-Control carry a
+    # 1970 Last-Modified (nix store mtime), so Chromium's heuristic keeps
+    # them fresh for years and never revalidates. The cache dir holds
+    # nothing else; the profile is in ~/.config.
+    rm -rf /var/lib/autopipette/.cache/chromium
   '';
 
   kioskScript = pkgs.writeShellScript "kiosk-start" ''
