@@ -18,6 +18,18 @@
       # flash-manta/flash-octopus call it by store path regardless.
     ];
 
+    # Accounts are Armbian's (ADR-0001), but system-manager's NixOS
+    # users-groups module declares root and nobody itself and userborn
+    # (on by default) rewrites their /etc/passwd entries every switch,
+    # existing users included. Its defaults are store-profile shells:
+    # root got /run/system-manager/sw/bin/bash, which only exists once
+    # activation has run this boot (no root login on a rescue boot), and
+    # installing those shell packages put Nix bash/sh first on every
+    # login shell's PATH. Plain path strings keep Debian's own shells and
+    # keep the packages out of the profile (issue #85).
+    users.users.root.shell = "/bin/bash";
+    users.users.nobody.shell = "/usr/sbin/nologin";
+
     # Mask Debian's journal-nocow.conf (same-name file in /etc overrides
     # /usr/lib/tmpfiles.d). Its `h /var/log/journal - - - - +C` fails on
     # Armbian: armbian-ramlog recreates /var/log/journal as a symlink to
