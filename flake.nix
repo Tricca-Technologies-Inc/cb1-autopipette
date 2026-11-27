@@ -271,6 +271,24 @@
           '
           touch $out
         '';
+        # userborn writes Debian's shells for the two accounts system-manager
+        # declares, and no shell package lands in the system profile ahead
+        # of Armbian's /bin/bash and /bin/sh (issue #85, modules/base.nix).
+        system-shells =
+          let
+            cfg = self.systemConfigs.default.config;
+            shellOf = name: cfg.users.users.${name}.shell;
+          in
+          assert shellOf "root" == "/bin/bash";
+          assert shellOf "nobody" == "/usr/sbin/nologin";
+          pkgs.runCommand "system-shells" { } ''
+            fail() { echo "FAIL: $*" >&2; exit 1; }
+            sw=${cfg.system.path}
+            for b in bash sh nologin; do
+              [ ! -e "$sw/bin/$b" ] || fail "system profile has bin/$b: it would shadow Armbian's"
+            done
+            touch $out
+          '';
         # tapCli puts exactly one binary on PATH (issue #74): adding
         # triccaEnv to systemPackages instead would shadow the system
         # python3. Also pins the env var tap needs outside a checkout, and
