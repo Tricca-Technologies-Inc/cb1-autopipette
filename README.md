@@ -118,6 +118,8 @@ on every machine (log out/in after the first switch to pick them up):
   serial or device is missing, isn't an F446, or is the same device as
   `[mcu]`. **Not yet verified on hardware** (issue #50) — if the board
   never reaches DFU, use the SD-card fallback under Troubleshooting.
+- `webcam setup [device]` / `webcam status` / `webcam off` — set up, check
+  and turn off the deck camera stream (see "Deck camera" below)
 - Both flash helpers refuse if more than one STM32 DFU device (`0483:df11`)
   is present: the M8P and the Octopus share that ID in ROM DFU, so it can't
   tell them apart. `dfu-util` is also installed system-wide for manual
@@ -208,6 +210,49 @@ Octopus and the servo.
 
 Drill this once per machine during commissioning (test M-18).
 
+## Deck camera
+
+A USB UVC webcam with MJPEG output, fixed above the deck (issue #81; the CB1
+has no Pi camera port). `modules/webcam.nix` runs ustreamer on
+`127.0.0.1:8080`, passing the camera's MJPEG through without re-encoding,
+and Mainsail's nginx serves it at `http://<host>/webcam/?action=stream`
+(snapshot: `?action=snapshot`). The `webcam` helper registers it with
+Moonraker as `deck`, so Mainsail shows it and the kiosk Run tab finds it
+through `server.webcams.list`.
+
+Per-rig settings live in `/etc/tricca-webcam.env`, which is machine-owned
+and never in the repo: the camera's `/dev/v4l/by-id/...` path carries its
+serial. A machine without that file has no camera, and the `webcam` unit is
+skipped at boot.
+
+```
+DEVICE=/dev/v4l/by-id/usb-<camera>-video-index0
+RESOLUTION=1280x720
+FPS=15
+V4L2_CTRLS=            # e.g. focus_automatic_continuous=0,focus_absolute=30
+```
+
+Bring-up (`bootstrap.sh` runs `webcam setup` itself when a camera is plugged
+in):
+
+1. Plug the camera in and run `webcam setup`. It picks the one camera in
+   `/dev/v4l/by-id` (name it, `webcam setup /dev/v4l/by-id/...`, if there
+   are several), checks it offers MJPEG at the configured size, writes the
+   settings file, starts the stream and registers it with Moonraker.
+2. If it says the camera has no MJPEG mode at that size, it lists the sizes
+   it has: set `RESOLUTION` to one in the settings file and re-run
+   `webcam setup`.
+3. Open `http://<host>/webcam/?action=stream` from a laptop and check the
+   framing.
+4. If the image is soft, `webcam status` lists the camera's controls. Put
+   the ones you want in `V4L2_CTRLS` (comma-separated `name=value`) and
+   re-run `webcam setup`; they're applied each time the stream starts.
+
+`webcam setup` keeps `RESOLUTION`, `FPS` and `V4L2_CTRLS` from an existing
+settings file, so re-running it after swapping the camera only changes
+`DEVICE`. `webcam off` stops the stream and removes the settings file and the
+Moonraker entry. The stream has no authentication, like Mainsail on `:80`.
+
 ## Updating machines after an app change
 
 The app itself (`tricca_autopipette` / `autopipette_kiosk`) lives in the
@@ -277,7 +322,7 @@ from u-boot if a regression bites.
 ## Per-machine state (never in the repo)
 
 hostname · wifi credentials (NetworkManager) · MCU serial IDs (M8P, Octopus) ·
-SAVE_CONFIG calibration values · TLS/tailscale identities if added.
+deck camera settings (`/etc/tricca-webcam.env`) · SAVE_CONFIG calibration values · TLS/tailscale identities if added.
 Everything else must come from this repo — if a machine works and the repo
 doesn't say why, that's a bug in the repo.
 

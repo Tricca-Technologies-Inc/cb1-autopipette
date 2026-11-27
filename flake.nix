@@ -220,6 +220,18 @@
         }:$PATH
         exec ${pkgs.bash}/bin/bash ${./scripts/switch-health-check.sh} "$@"
       '';
+      # The `webcam` helper (issue #81, modules/aliases.nix). v4l2-ctl/curl/jq
+      # from nixpkgs; systemctl stays the host's.
+      webcamTool = pkgs.writeShellScript "webcam" ''
+        export PATH=${
+          pkgs.lib.makeBinPath [
+            pkgs.v4l-utils
+            pkgs.curl
+            pkgs.jq
+          ]
+        }:$PATH
+        exec ${pkgs.bash}/bin/bash ${./scripts/webcam.sh} "$@"
+      '';
     in
     {
       # Applied with the `switch` shell alias (modules/aliases.nix), which
@@ -239,6 +251,7 @@
           ./modules/aliases.nix
           ./modules/nix-settings.nix
           ./modules/io-tuning.nix
+          ./modules/webcam.nix
         ];
         specialArgs = {
           inherit
@@ -255,6 +268,7 @@
             ioTuningApply
             switchHealthSampler
             switchHealthCheck
+            webcamTool
             ;
         };
       };
@@ -368,6 +382,13 @@
         # curl/systemctl/journalctl.
         switch-health-check = pkgs.runCommand "switch-health-check" { nativeBuildInputs = [ pkgs.jq ]; } ''
           ${pkgs.bash}/bin/bash ${./tests/switch-health-check.test.sh} ${./scripts/switch-health-check.sh}
+          touch $out
+        '';
+
+        # The `webcam` helper (issue #81), against a fake /dev/v4l/by-id and
+        # fake v4l2-ctl/systemctl/curl.
+        webcam = pkgs.runCommand "webcam" { } ''
+          ${pkgs.bash}/bin/bash ${./tests/webcam.test.sh} ${./scripts/webcam.sh}
           touch $out
         '';
 

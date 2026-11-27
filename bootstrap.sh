@@ -146,6 +146,17 @@ echo "==> Detecting MCU serial IDs (Manta M8P -> [mcu], Octopus V1.1 -> [mcu oct
 # re-running bootstrap.sh doesn't duplicate them (issue #51).
 bash "$REPO_DIR/scripts/write-mcu-serials.sh"
 
+echo "==> Deck camera (optional)"
+# A USB webcam plugged in now gets set up for streaming (issue #81); a machine
+# without one is left alone. Its device path carries the camera's serial, so
+# it goes in the machine-owned /etc/tricca-webcam.env, never the repo. The
+# helpers were just installed by the switch above, so a login shell has them.
+if ls /dev/v4l/by-id/*-video-index0 >/dev/null 2>&1; then
+  bash -lc 'webcam setup' || echo "    Camera not set up. Fix it, then run: webcam setup" >&2
+else
+  echo "    No camera plugged in. Add one any time with: webcam setup"
+fi
+
 echo "==> [6/6] boot splash (armbianEnv.txt/initramfs live in /boot — outside system-manager's reach)"
 # Owned 'tricca' plymouth theme: watermark + throbber below it. Rebuilds the
 # initramfs. Legacy blob-based images (kernel <5.19) are documented in
@@ -175,7 +186,9 @@ echo "             (persists in NetworkManager; credentials never enter the repo
 echo "  2. MCU:    serial IDs auto-detected above -- if it warned, fix the USB"
 echo "             devices and re-run scripts/write-mcu-serials.sh, or set them"
 echo "             by hand via Mainsail's config editor"
-echo "  3. reboot, then log in again — shell helpers (switch, splash-preview, ...) load"
+echo "  3. camera: set up above if one was plugged in -- otherwise, or if it"
+echo "             warned, run 'webcam setup' after the reboot (README 'Deck camera')"
+echo "  4. reboot, then log in again — shell helpers (switch, splash-preview, ...) load"
 echo "             from /etc/profile.d/tricca-aliases.sh; see README 'Shell helpers'"
 echo
 echo "verify: nmcli device status   # wlan0 should read 'disconnected' or 'connected'"
