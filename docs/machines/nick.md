@@ -1,6 +1,19 @@
 # nick
 
-## Current status (2026-11-04)
+## Current status (2026-11-27)
+
+- **Deployed 2026-11-27:** cb1 `c033e83` (tricca-src `094595a`). The post-switch health check passes, with all seven services OK.
+  - Before the first switch, `lead_mm: 8` was added to the three pipette files in `/var/lib/autopipette/config/pipettes`, which the new code requires. Backup: `/var/lib/autopipette/backup-pre-lead-20261127/`. `tap settings` shows the syringe limits scaled for the 8 mm lead.
+  - **Deck camera:** a Logitech C270 (`usb-046d_0825_7B27A5C0-video-index0`), set up with `webcam setup` (1280x720 at 15 fps, `/etc/tricca-webcam.env`) and registered in Moonraker as `deck`. It shows on the kiosk Run tab.
+  - The kiosk kept showing the old UI from Chromium's cache until `~pipette/.cache/chromium` was cleared by hand; #90 makes `kiosk-pre` clear that cache on every start.
+  - `network.hostname` in the system file is still the template's `CHANGE-ME.local`. That's harmless: tapd uses `--local-connect`, and since Tricca_AutoPipette#250 the camera URL no longer uses the hostname.
+- **Rig checks:**
+  - Passed: #178 (bounds), cb1 #87 (tap on PATH, root shell), #242 (camera).
+  - #187, a failed home with a Z switch held: the kiosk pill showed the job as `cancelled`. Still unconfirmed: whether Klipper's error message was shown, and whether the axes read unhomed afterwards.
+  - Not done yet: #215 (plate jog), cb1 #80 (on-screen keyboard).
+- **Network:** nick dropped off JamesPhoneNet (10.36.84.60 at the time) later on 2026-11-27 while the kiosk stayed up. Not yet diagnosed.
+
+## Status (2026-11-04)
 
 - **Stage 1 deployed and Klipper re-seeded (Path A).** cb1 `88a788a` (tricca-src `713d730`, printer-cfgs `6681d79`), system-manager generation 6. Armbian 26.8.3, kernel 6.18.44, Determinate Nix 3.24.1.
   - The post-switch health check passes.
